@@ -40,8 +40,8 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 
 ## Manual Installation (Dedicated Server)
 
-### Fabric server
-1. Create a clean folder and place the Fabric server launcher jar for **1.21.8** (e.g. `fabric-server-mc.1.21.8-loader.0.17.2-launcher.1.1.0.jar`).
+### server (or neoforge)
+1. Place the Fabric or Neoforge server launcher jar for **1.21.8** (e.g. `fabric-server-mc.1.21.8-loader.0.17.2-launcher.1.1.0.jar`).
 2. Run once to generate files, accept the EULA in `eula.txt`.
 3. Put these in the server `mods/`:
    - `architectury-17.0.8+ (fabric).jar`
