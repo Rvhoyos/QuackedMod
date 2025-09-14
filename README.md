@@ -11,7 +11,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - Items: duck egg (throwable; chance to hatch ducklings), spawn egg, meat/food variants, feathers, more.
 - Fabric and NeoForge builds from the same codebase.
 ## Coming to V1.1
-- plug-in config for custom biomes (from other mods) and spawn rate.
+- plug-in config for custom biomes (from other mods) and adjustbale spawn rate.
 - more animations, sounds and textures.
 - flying ducks is a planned feature.
 ## Game/Loader Compatibility
