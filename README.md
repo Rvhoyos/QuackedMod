@@ -1,7 +1,7 @@
-# QuackedDucks 1.0
+# QuackedDucks 1.0.0
 
 A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natural spawns, sounds, items, and hatchable eggs. Built with Architectury to support both Fabric and NeoForge. GeckoLib5 for duck model and animations.
->V1.0.0 Got CurseForge Approval! Just search Ducky Quack Pack!
+>V1.0.0 Got CurseForge Approval! Just search Ducky Quack Pack on their website or client!
 ## Features
 - Duck entity (ambient/hurt/death sounds, basic behaviors, follow/line logic, egg-laying).
 - Custom Duck entity AI keep ducks in a line or always in order.
