@@ -48,4 +48,4 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
    - `geckolib-5.x (fabric).jar`
    - `fabric-api (1.21.8).jar`
    - `quack-fabric-<version>.jar`
-4. Start the server:
+4. Start the server and connect.
