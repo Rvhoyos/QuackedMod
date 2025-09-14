@@ -1,0 +1,23 @@
+Copyright (c) 2025 rvhoyos. All rights reserved.
+
+Permission is granted to download, install, and run the unmodified compiled version of this mod (“the Mod”).
+
+You may:
+- Include the unmodified Mod JAR in public or private modpacks, including but not limited to packs hosted on
+  CurseForge, Modrinth, FTB App, and ATLauncher, provided you credit this project and link to an official project page.
+- Link to, embed, or fetch the Mod from its official project pages controlled by the copyright holder
+  (e.g., CurseForge project page, Modrinth project page, GitHub Releases).
+- Create separate add-on mods that depend on this Mod, distributed separately and not containing its code.
+
+You may NOT (without prior written permission):
+- Reupload or host the Mod JAR as a standalone download on third-party sites or project pages.
+  Mirrors must link to an official project page rather than hosting the file.
+- Publish modified builds, forks, or derivative works of the Mod or its source code.
+- Copy any portion of the source code into other projects.
+
+The copyright holder may designate additional official mirrors at any time.
+
+THE MOD IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+Third-party libraries used at runtime (e.g., GeckoLib, Architectury API) remain under their own licenses.
+See CREDITS.md

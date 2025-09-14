@@ -1,0 +1,15 @@
+{
+    "item.quack.duck_meat": "Duck Meat",
+    "item.quack.duck_feather": "Duck Feather",
+    "item.quack.duck_feather_arrow": "Duck Feathered Arrow",
+    "item.quack.cooked_duck": "Cooked Duck",
+    "item.quack.foie_gras": "Foie Gras",
+    "item.quack.duck_spawn_egg": "Duck Spawn Egg",
+    "entity.quack.duck": "Duck",
+    "item.quack.empty_foie_gras_bowl": "Empty Bowl",
+    "item.quack.duck_egg": "Duck Egg",
+    
+    "subtitles.quack.duck.ambient": "Duck quacks",
+    "subtitles.quack.duck.hurt": "Duck hurt",
+    "subtitles.quack.duck.death": "Duck dies"
+}

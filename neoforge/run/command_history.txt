@@ -1,0 +1,46 @@
+/summon duck
+/summon quack:duck
+//
+/summon quack:duck
+/summon duck
+/summon quack:duck
+/summon duck
+/summon quack:duck
+/time set day
+/summon quack:duck
+/seed
+/summon minecraft:warden
+/time add 1
+/time add 2
+/time add 1d
+/time add 10000
+/gamemode survival
+/time set day
+/gamemode creative
+/gamemode survival
+/gamemode
+/time set day
+/summon quac
+/summon quack:duck
+/gamemode creative
+/gamemode survival
+/gamemode creative
+//time set day
+/time set day
+/gamemode survival
+/gamemode creative
+/time set day
+/time set dau
+/time set day
+/kill
+/gamemode creative
+/seed
+/kill
+/playsound quack:entity ambient
+/playsound quack:entity a
+/playsound quack:entity ambient
+//kill
+/kill
+/summon quack:duck
+/clear
+/clear items duck_egg

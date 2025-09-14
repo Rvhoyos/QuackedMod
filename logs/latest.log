@@ -1,0 +1,6 @@
+[18:42:20] [main/INFO] (Launcher) ModLauncher running: args [--launchTarget, neoforgeclientdev, --version, 21.8.33, --assetIndex, 1.21.8-26, --assetsDir, /home/raul/.gradle/caches/fabric-loom/assets, --fml.fmlVersion, 9.0.16, --fml.mcVersion, 1.21.8, --fml.neoForgeVersion, 21.8.33, --fml.neoFormVersion, 20250717.133445]
+[18:42:20] [main/INFO] (Launcher) JVM identified as Ubuntu OpenJDK 64-Bit Server VM 21.0.8+9-Ubuntu-0ubuntu124.04.1
+[18:42:20] [main/INFO] (Launcher) ModLauncher 9.0 starting: java version 21.0.8 by Ubuntu; OS Linux arch amd64 version 6.14.0-29-generic
+[18:42:20] [main/INFO] (ImmediateWindowHandler) Loading ImmediateWindowProvider fmlearlywindow
+[18:42:21] [main/INFO] (mixin) SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/home/raul/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.15.2+mixin.0.8.7/2af2f021d8e02a0220dc27a7a72b4666d66d44ca/sponge-mixin-0.15.2+mixin.0.8.7.jar%23106!/ Service=ModLauncher Env=CLIENT
+[18:42:21] [fml-loadingscreen/INFO] (LoadingScreenRenderer) GL info: NVIDIA GeForce RTX 3060 Ti/PCIe/SSE2 GL version 3.2.0 NVIDIA 570.169, NVIDIA Corporation

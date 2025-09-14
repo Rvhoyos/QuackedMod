@@ -1,0 +1,14 @@
+{
+  "entity.duck.ambient": {
+    "sounds": [{ "name": "quack:duck_sounds" }],
+    "subtitle": "subtitles.quack.duck.ambient"
+  },
+  "entity.duck.hurt": {
+    "sounds": [{ "name": "quack:duck_sounds" }],
+    "subtitle": "subtitles.quack.duck.hurt"
+  },
+  "entity.duck.death": {
+    "sounds": [{ "name": "quack:duck_sounds" }],
+    "subtitle": "subtitles.quack.duck.death"
+  }
+}

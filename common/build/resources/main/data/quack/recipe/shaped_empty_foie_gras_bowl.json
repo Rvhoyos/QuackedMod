@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "   ",
+    "PFP",
+    " P "
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "F": "quack:duck_feather"
+  },
+  "result": { "id": "quack:empty_foie_gras_bowl", "count": 4 }
+}

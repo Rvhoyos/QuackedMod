@@ -1,0 +1,35 @@
+{
+  "minecraft:adventure/shoot_arrow": {
+    "criteria": {
+      "shot_arrow": "2025-09-10 23:43:57 -0400"
+    },
+    "done": true
+  },
+  "minecraft:recipes/decorations/crafting_table": {
+    "criteria": {
+      "unlock_right_away": "2025-09-10 23:43:45 -0400"
+    },
+    "done": true
+  },
+  "minecraft:recipes/redstone/dispenser": {
+    "criteria": {
+      "has_bow": "2025-09-10 23:43:45 -0400"
+    },
+    "done": true
+  },
+  "minecraft:adventure/root": {
+    "criteria": {
+      "killed_something": "2025-09-10 23:43:57 -0400"
+    },
+    "done": true
+  },
+  "minecraft:adventure/adventuring_time": {
+    "criteria": {
+      "minecraft:forest": "2025-09-10 23:44:58 -0400",
+      "minecraft:river": "2025-09-10 23:45:59 -0400",
+      "minecraft:plains": "2025-09-10 23:43:46 -0400"
+    },
+    "done": false
+  },
+  "DataVersion": 4440
+}

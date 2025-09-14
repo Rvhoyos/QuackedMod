@@ -1,0 +1,6 @@
+{
+    "model":{
+        "type": "minecraft:model",
+        "model": "quack:item/empty_foie_gras_bowl"
+    }
+}

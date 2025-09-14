@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[9,)"
+#issueTrackerURL = ""
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "quack"
+version = "1.0.0"
+displayName = "QuackedDucks"
+authors = "rvhoyos"
+description = '''
+New duck entity that resemble a rubber duck with custom items such as meat, cooked meat, foie gras with buffs and custom Duck AI behavior on land and water (flying coming soon!)
+'''
+#logoFile = "assets/quack/icon.png" # TODO MAKE LOGO FILE
+
+[[dependencies.quack]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.8,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.quack]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.8,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.quack]]
+modId = "architectury"
+type = "required"
+versionRange = "[17.0.8,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "quack.mixins.json"

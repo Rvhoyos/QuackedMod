@@ -1,0 +1,45 @@
+/summon quack:duck
+/summon du
+/summon quack:duck
+/gamemode surv
+/gamemode survival
+/summon quack:duck
+/give Player872 minecraft:beetroot_seeds 22
+/summon quack:duck
+/gamemode survival
+/gamemode creative
+/gamemode survival
+/help
+/gamemode crea
+/gamemode creative
+/summon quack:duck
+/summon duck
+/summon quack:duck
+/summon chicken
+/summon quack:duck
+/summon chicken
+/summon quack:duck
+/time set day
+/summon quack:duck
+/summonduck
+/summon quack:duck
+/give duck_spawn_egg
+/time set day
+/clear duck
+/kill duck
+/
+/kill quack.duck
+/gamerule doMobSpawning true
+/locate biome minecraft:plains
+/time set day
+/gamemode crea
+/gamemode creative
+/kill
+/summon quack:duck
+/summon minecraft:chicken
+/summon duck 5
+/summon quack:duck 5
+/summon quack:duck
+/summon duck
+/summon quack:duck
+/time set day

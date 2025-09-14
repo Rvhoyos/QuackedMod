@@ -1,0 +1,32 @@
+{
+  "display": {
+    "icon": { "item": "quack:duck_spawn_egg" },
+    "title": { "text": "Quack!" },
+    "description": { "text": "Find a duck or pick up a duck egg." },
+    "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_duck_egg": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          { "items": [ "quack:duck_egg" ] }
+        ]
+      }
+    },
+    "encounter_duck": {
+      "trigger": "minecraft:player_hurt_entity",
+      "conditions": {
+        "entity": { "type": "quack:duck" }
+      }
+    }
+  },
+  "requirements": [
+    ["has_duck_egg"],
+    ["encounter_duck"]
+  ]
+}
