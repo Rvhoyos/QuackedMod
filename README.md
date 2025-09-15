@@ -77,7 +77,10 @@ From the repo root, build each loader **module** explicitly:
 > Jars can be found under <modloader>/build/libs **not** under common folder.
 
 # Fabric release jar
-`./gradlew :fabric:remapJar`
-
+`./gradlew :fabric:remapJar` or `./gradlew :fabric:build`
+### running into issues?
+`./gradlew :fabric:clean :fabric:build`
 # NeoForge release jar
-`./gradlew :neoforge:remapJar`
+`./gradlew :neoforge:remapJar` or `./gradlew :neoforge:build`
+### running into issues?
+`./gradlew :neoforge:clean :neoforge:build`
