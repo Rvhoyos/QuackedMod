@@ -1,9 +1,0 @@
-{
-    "type": "minecraft:smelting",
-    "ingredient": "quack:duck_meat",
-    "result": {
-        "id": "quack:cooked_duck"
-    },
-    "experience": 0.35,
-    "cookingtime": 200
-}
