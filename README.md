@@ -58,7 +58,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 **Prereqs:** JDK 21+, Git, and the Gradle wrapper included in this repo.
 
 From the repo root, build each loader **module** explicitly:
-> Jars can be found under /<modloader>/build/libs **not** under common folder.
+> Jars can be found under <modloader>/build/libs **not** under common folder.
 
 # Fabric release jar
 `./gradlew :fabric:remapJar`
