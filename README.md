@@ -1,8 +1,17 @@
+[![Release](https://img.shields.io/github/v/release/Rvhoyos/QuackedMod)](https://github.com/Rvhoyos/QuackedMod/releases)
+![GitHub Downloads](https://img.shields.io/github/downloads/Rvhoyos/QuackedMod/total)
+[![CurseForge Downloads](https://img.shields.io/curseforge/dt/1345567?label=CurseForge%20downloads)](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
+[![Modrinth Downloads](https://img.shields.io/modrinth/dt/ducky-quack-pack?label=Modrinth%20downloads)](https://modrinth.com/mod/ducky-quack-pack)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey)](#license)
+---
 # QuackedDucks 1.0.0
 
 A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natural spawns, sounds, items, and hatchable eggs. Built with Architectury to support both Fabric and NeoForge. GeckoLib5 for duck model and animations.
 >V1.0.0 Got CurseForge Approval! Just search Ducky Quack Pack on their website or client!
 ## Features
+![Issues](https://img.shields.io/github/issues/Rvhoyos/QuackedMod)
+![Stars](https://img.shields.io/github/stars/Rvhoyos/QuackedMod?style=social)
+
 - Duck entity (ambient/hurt/death sounds, basic behaviors, follow/line logic, egg-laying).
 - Custom Duck entity AI keep ducks in a line or always in order.
 - Duck items, foods with crafts and recipes.
@@ -10,11 +19,15 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - Natural spawns across selected overworld biomes (rivers, swamps, plains, forests, etc.).
 - Items: duck egg (throwable; chance to hatch ducklings), spawn egg, meat/food variants, feathers, more.
 - Fabric and NeoForge builds from the same codebase.
+---
 ## Coming to V1.1
 - plug-in config for custom biomes (from other mods) and adjustbale spawn rate.
 - more animations, sounds and textures.
 - flying ducks is a planned feature.
 ## Game/Loader Compatibility
+![Minecraft](https://img.shields.io/badge/Minecraft-1.21.8-informational)
+![Loaders](https://img.shields.io/badge/Loaders-Fabric%20%7C%20NeoForge-informational)
+![Java](https://img.shields.io/badge/Java-21-informational)
 - **Minecraft:** 1.21.8
 - **Fabric:** Loader `0.17.2` (or newer), **Fabric API** required
 - **NeoForge:** `21.8.x`
