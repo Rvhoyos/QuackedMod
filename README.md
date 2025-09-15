@@ -51,3 +51,17 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
    - `fabric-api (1.21.8).jar`
    - `quack-fabric-<version>.jar`
 4. Start the server and connect.
+---
+# Dev
+## Building distributable JARs (Gradle)
+
+**Prereqs:** JDK 21+, Git, and the Gradle wrapper included in this repo.
+
+From the repo root, build each loader **module** explicitly:
+> Jars can be found under /<modloader>/build/libs **not** under common folder.
+
+# Fabric release jar
+`./gradlew :fabric:remapJar`
+
+# NeoForge release jar
+`./gradlew :neoforge:remapJar`
