@@ -23,7 +23,9 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
 - [modrinth](https://modrinth.com/mod/ducky-quack-pack)
 ## Manual Installation (Client)
-> jars can be found under modloader folder / build / libs / Quack-<modloader>-1.0.0.jar
+>Download official Jar from curseforge or modrinth.
+>For building your own jars,clone the repository and -
+> execute commands under #Dev end of this page for more details.
 ### Fabric client
 1. Install a Fabric profile for Minecraft 1.21.8 (via the Fabric installer/launcher).
 2. In your game directory (`.minecraft/mods`):
@@ -31,7 +33,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
    - Add `geckolib-5.x (fabric).jar`
    - Add `fabric-api (1.21.8).jar`
    - Add `quack-fabric-<version>.jar`
-   > from official sources.
+>Get from official sources. [Geckolib](https://modrinth.com/mod/geckolib/versions?g=1.21.8&l=fabric&l=neoforge), [Architectury](https://modrinth.com/mod/architectury-api)
 
 ### NeoForge client
 1. Install NeoForge for 1.21.8.
@@ -39,6 +41,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
    - Add `architectury-17.0.8+ (neoforge).jar`
    - Add `geckolib-5.x (neoforge).jar`
    - Add `quack-neoforge-<version>.jar`
+>Get from official sources. [Geckolib](https://modrinth.com/mod/geckolib/versions?g=1.21.8&l=fabric&l=neoforge), [Architectury](https://modrinth.com/mod/architectury-api)
 
 ## Manual Installation (Dedicated Server)
 
