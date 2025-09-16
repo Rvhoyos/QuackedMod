@@ -15,7 +15,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - Duck entity (ambient/hurt/death sounds, basic behaviors, follow/line logic, egg-laying).
 - Custom Duck entity AI keep ducks in a line or always in order.
 - Duck items, foods with crafts and recipes.
-- - (mod-wiki coming soon.)
+- - [wiki](https://quackedmod.wiki/)
 - Natural spawns across selected overworld biomes (rivers, swamps, plains, forests, etc.).
 - Items: duck egg (throwable; chance to hatch ducklings), spawn egg, meat/food variants, feathers, more.
 - Fabric and NeoForge builds from the same codebase.
