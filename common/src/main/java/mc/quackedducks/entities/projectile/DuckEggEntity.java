@@ -59,7 +59,8 @@ public class DuckEggEntity extends ThrowableItemProjectile {
     // no super; we fully handle impact
     if (!this.level().isClientSide) {
         hatchBabies();
-        this.level().broadcastEntityEvent(this, (byte)3); // impact particles
+        //TODO: do damage to entities? or do knock back only?
+        this.level().broadcastEntityEvent(this, (byte)3); // impact particles (doesnt work)
         this.discard();
     }
 }
