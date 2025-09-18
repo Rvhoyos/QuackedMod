@@ -22,6 +22,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 ---
 ## Coming to V1.1
 - plug-in config for custom biomes (from other mods) and adjustbale spawn rate.
+- FIXING hitbox for ducks. _(Currently Investigating issue)_
 - more animations, sounds and textures.
 - flying ducks is a planned feature.
 ## Game/Loader Compatibility
