@@ -12,6 +12,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.Pose;
 
 import net.minecraft.world.entity.Entity;
 
@@ -44,7 +46,7 @@ public class QuackEntityTypes {
         DUCK_EGG_PROJECTILE = registerEntityType("duck_egg_projectile",
             () -> EntityType.Builder.<mc.quackedducks.entities.projectile.DuckEggEntity>of(
                     mc.quackedducks.entities.projectile.DuckEggEntity::new, MobCategory.MISC)
-                .sized(0.25f, 0.25f)
+                .sized(0.25f, 0.50f)
                 .clientTrackingRange(4)
                 .updateInterval(10)
                 .build(ResourceKey.create(Registries.ENTITY_TYPE,
@@ -53,8 +55,8 @@ public class QuackEntityTypes {
 
 
         DUCK = registerEntityType("duck", () -> EntityType.Builder.of(DuckEntity::new, MobCategory.CREATURE) //todo play with values and properties
-                .sized(0.55f, 0.70f) // was 0.9f and 1.4f
-                .eyeHeight(1.3f)
+                .sized(0.75f, 0.95f) // was 0.9f and 1.4f
+                .eyeHeight(0.95f) //eyes are pretty much at height.
                 .passengerAttachments(1.36875f)
                 .clientTrackingRange(10)
                 .build(ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, "duck"))));
