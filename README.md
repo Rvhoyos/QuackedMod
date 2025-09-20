@@ -33,7 +33,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - **Fabric:** Loader `0.17.2` (or newer), **Fabric API** required
 - **NeoForge:** `21.8.x`
 - **Shared libs (both loaders):** Architectury `17.0.8+`, GeckoLib `5.x`
-## Curse Forge & modrinth Intallation:
+## Curse Forge & modrinth Installation:
 - [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
 - [modrinth](https://modrinth.com/mod/ducky-quack-pack)
 ## Manual Installation (Client)
