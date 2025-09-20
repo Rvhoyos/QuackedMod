@@ -1,7 +1,5 @@
 package mc.quackedducks.entities;
 
-import net.minecraft.advancements.critereon.TameAnimalTrigger;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
@@ -40,7 +38,6 @@ import software.bernie.geckolib.animation.RawAnimation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.network.chat.Component;
 
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
@@ -66,6 +63,11 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     private static final int OWNER_FOLLOW_PRIORITY = 7;
     private boolean ownerFollowPaused = false;
     private boolean followGoalAdded = false;
+// --- Owner-follow gating (stability + proximity) ---
+    private int headStableTicks = 0;                // counts how long we've been the head
+    private static final int HEAD_STABLE_REQUIRED = 120; // 6s @ 20tps
+    private static final float OWNER_ENABLE_DIST   = 12.0F; // must be within this to enable
+
     // --- Debug logging ---
     private static final Logger LOG = LogUtils.getLogger();
     /** Flip to false to silence all duck debug logs without rebuilding logic. */
@@ -135,6 +137,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     
     final DuckEntity prev = this.following;
     this.following = newLeader;
+    this.headStableTicks = 0; // reset stability on leader change
     dbg("leader set: {} -> {}", prev == null ? "null" : prev.getId(), newLeader == null ? "null" : newLeader.getId());
     updateOwnerFollowGoal();
 }
@@ -204,20 +207,63 @@ private void dbg(String fmt, Object... args) {
 
 
     /** Keep the owner-follow goal in sync with leader/paused/tame state (and log transitions). */
-    private void updateOwnerFollowGoal() {
-        if (this.followOwnerGoal == null) return; // not constructed yet
-        final boolean shouldHave = this.isTame() && !this.ownerFollowPaused && this.isLeader();
+private void updateOwnerFollowGoal() {
+    if (this.followOwnerGoal == null) return;
 
-        if (shouldHave && !followGoalAdded) {
-            this.goalSelector.addGoal(OWNER_FOLLOW_PRIORITY, this.followOwnerGoal);
-            followGoalAdded = true;
-            dbg("follow-goal ADDED (prio={}, min=6.0, max=22.0)", OWNER_FOLLOW_PRIORITY);
-        } else if (!shouldHave && followGoalAdded) {
-            this.goalSelector.removeGoal(this.followOwnerGoal);
-            followGoalAdded = false;
-            dbg("follow-goal REMOVED");
+    boolean nearOwner = false;
+    if (this.isTame()) {
+        final var owner = this.getOwner();
+        if (owner != null) nearOwner = this.distanceTo(owner) < OWNER_ENABLE_DIST;
+    }
+
+    final boolean head        = (!this.isBaby() && this.isLeader());
+    final boolean stableHead  = head && this.headStableTicks >= HEAD_STABLE_REQUIRED;
+
+    // ADD the goal only when near owner and head has been stable long enough
+    final boolean shouldAdd    = this.isTame() && !this.ownerFollowPaused && stableHead && nearOwner;
+
+    // REMOVE the goal only when it truly becomes invalid (do NOT remove just because nearOwner is false)
+    final boolean shouldRemove = !this.isTame() || this.ownerFollowPaused || !head || this.isBaby();
+
+    if (shouldAdd && !followGoalAdded) {
+        this.goalSelector.addGoal(OWNER_FOLLOW_PRIORITY, this.followOwnerGoal);
+        followGoalAdded = true;
+        dbg("follow-goal ADDED (prio={}, stableTicks={}, nearOwner={})", OWNER_FOLLOW_PRIORITY, this.headStableTicks, nearOwner);
+    } else if (followGoalAdded && shouldRemove) {
+        this.goalSelector.removeGoal(this.followOwnerGoal);
+        followGoalAdded = false;
+        dbg("follow-goal REMOVED (tame={}, paused={}, stableTicks={}, nearOwner={})", this.isTame(), this.ownerFollowPaused, this.headStableTicks, nearOwner);
+    }
+}
+
+
+    /*
+     * --- Taming stability fix ---
+     * Tracks how long the duck has been a stable head (not following, not a baby)
+     * and only allows taming if stable for 1min.
+     * // Resets if it becomes a follower or a baby.
+     * Prevents random teleporting when taming a migrating duck.
+     */
+    @Override
+    public void tick() {
+        super.tick();
+
+        if (!level().isClientSide) {
+            // Head = adult with no predecessor (uses your existing isLeader())
+            if (!this.isBaby() && this.isLeader()) {
+                headStableTicks = Math.min(headStableTicks + 1, HEAD_STABLE_REQUIRED + 200);
+            } else {
+                headStableTicks = 0;
+            }
+
+            // Re-evaluate goal attachment periodically (cheap)
+            if ((this.tickCount % 10) == 0) { // every 0.5s
+                updateOwnerFollowGoal();
+            }
         }
     }
+
+
 
 /**
  * Handles right-click interaction for taming and for pausing owner-follow (leader only).
@@ -337,7 +383,7 @@ protected void readAdditionalSaveData(ValueInput in) {
     this.goalSelector.addGoal(6, new BreedGoal(this, 1.0D));
     //goofy interrrupts go above taming and below breeding.
     // Construct once; updateOwnerFollowGoal() decides when it’s active
-    this.followOwnerGoal = new FollowOwnerGoal(this, 1.05D, 8.0F, 22.0F);
+    this.followOwnerGoal = new FollowOwnerGoal(this, 1.05D, 8.0F, 44.0F);
     updateOwnerFollowGoal(); // set initial state based on tame/leader/paused
 
     // Custom behavior : leading duck occasional migration Interrupt
