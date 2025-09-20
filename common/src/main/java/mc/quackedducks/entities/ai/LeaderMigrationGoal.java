@@ -48,32 +48,29 @@ public class LeaderMigrationGoal extends Goal {
      */
     @Override
     public boolean canUse() {
-        // only the "head" duck should decide to migrate
-        if (duck.getLeader() != null) return false;
+        // Only the head-of-line (no predecessor) and never babies
+        if (duck.isBaby()) return false;
+        if (!duck.isLeader()) return false;
 
         if (cooldown > 0) { cooldown--; return false; }
-
-        // very low chance each time cooldown hits zero
-        // (1 in 30 checks)
         if (rng.nextInt(30) != 0) return false;
 
-        // pick a distant-ish point around 20–32 blocks away, random direction
-        // stay roughly on the same Y with slight variance
-        double distance = 20.0 + rng.nextDouble() * 12.0; // 20–32
+        // choose a far-ish target (20–32 blocks) with slight Y jitter
+        double distance = 20.0 + rng.nextDouble() * 12.0;
         double angle = rng.nextDouble() * Math.PI * 2.0;
         double dx = Math.cos(angle) * distance;
         double dz = Math.sin(angle) * distance;
-        double dy = rng.nextGaussian() * 1.0; // small vertical wobble
+        double dy = rng.nextGaussian() * 1.0;
 
         Vec3 here = duck.position();
         this.target = new Vec3(here.x + dx, here.y + dy, here.z + dz);
 
-        // set a new cooldown for next time we *consider* migrating
-        // average every ~2–3 minutes: 2400–3600 ticks
+        // next time we *consider* migrating (e.g., 2400–3600 ticks)
         this.cooldown = rng.nextInt(maxDelayTicks - minDelayTicks + 1) + minDelayTicks;
-
         return true;
     }
+
+
     /**
      * Begin pathing toward the chosen {@link #target}, if any.
      */
@@ -89,9 +86,12 @@ public class LeaderMigrationGoal extends Goal {
      */
     @Override
     public boolean canContinueToUse() {
-        // keep going while we have a path; if head changes (somehow), stop
-        return duck.getLeader() == null && !duck.getNavigation().isDone();
+        // stop if we’re no longer head, became a baby (edge bug), or navigation finished
+        if (duck.isBaby()) return false;
+        if (!duck.isLeader()) return false;
+        return !duck.getNavigation().isDone();
     }
+
 
     /**
      * Stop navigating and clear the current target.

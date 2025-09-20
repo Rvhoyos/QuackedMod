@@ -116,6 +116,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
 
     /** Attempts to claim the given duck as our follower (tail). */
     public boolean claimFollower(DuckEntity duck) {
+        if (this.isBaby() || duck == null || duck.isBaby()) return false; // any invalid ⇒ reject
         if (this.followedBy == null || !this.followedBy.isAlive()) {
             this.followedBy = duck;
             return true;
@@ -128,16 +129,12 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     }
     /** Sets the leader this duck follows (may be null to detach). */
    public void setLeader(@org.jetbrains.annotations.Nullable DuckEntity newLeader) {
+    if (this.isBaby()) return;                      // babies don’t join custom chains
+    if (newLeader != null && newLeader.isBaby()) return; // can’t follow a baby
+    
+    
     final DuckEntity prev = this.following;
     this.following = newLeader;
-
-    // Auto-name when becoming a leader and unnamed
-    if (this.isLeader() && this.isTame() && !this.hasCustomName()) {
-        this.setCustomName(net.minecraft.network.chat.Component.literal("Lead Duck"));
-        this.setCustomNameVisible(true);
-        dbg("auto-named as leader");
-    }
-
     dbg("leader set: {} -> {}", prev == null ? "null" : prev.getId(), newLeader == null ? "null" : newLeader.getId());
     updateOwnerFollowGoal();
 }
@@ -255,6 +252,7 @@ private void dbg(String fmt, Object... args) {
 
     @Override
 public InteractionResult mobInteract(Player player, InteractionHand hand) {
+    
     final ItemStack stack = player.getItemInHand(hand);
     final boolean client = level().isClientSide;
 
@@ -277,14 +275,6 @@ public InteractionResult mobInteract(Player player, InteractionHand hand) {
             this.tame(player);
             this.setPersistenceRequired();
             dbg("tamed by {}", player.getName().getString());
-
-            // Auto-name leaders on tame (if unnamed)
-            if (this.isLeader() && !this.hasCustomName()) {
-                this.setCustomName(Component.literal("Lead Duck"));
-                this.setCustomNameVisible(true);
-                dbg("auto-named as leader on tame");
-            }
-
             updateOwnerFollowGoal();           // ensures follow state matches policy
             level().broadcastEntityEvent(this, (byte)7); // hearts
         }
