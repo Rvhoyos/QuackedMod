@@ -3,6 +3,7 @@ package mc.quackedducks.entities;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Bee;
@@ -13,10 +14,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.sounds.SoundEvent;
-
-import mc.quackedducks.sound.QuackedSounds;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
@@ -24,6 +23,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.BreedGoal;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.world.entity.ai.goal.FollowParentGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.PanicGoal;
@@ -36,6 +36,11 @@ import software.bernie.geckolib.animatable.manager.AnimatableManager.ControllerR
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionHand;
+
+import org.slf4j.Logger;
+import com.mojang.logging.LogUtils;
 
 /**
  * Quacked Ducks - main duck entity.
@@ -45,7 +50,7 @@ import net.minecraft.world.item.Items;
  * - GeckoLib-powered idle/walk animations.
  * - Basic “follow a leader” chain via {@code following}/{@code followedBy}.
  */
-public class DuckEntity extends Animal implements GeoEntity {
+public class DuckEntity extends TamableAnimal implements GeoEntity {
     // --- Simple “follow the leader” chain state ---
     @Nullable private DuckEntity following; // who I’m following
     @Nullable private DuckEntity followedBy; // who is following me
@@ -53,7 +58,23 @@ public class DuckEntity extends Animal implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.duck.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.duck.walk");
-    
+    // --- Owner-follow goal (taming) ---
+    private FollowOwnerGoal followOwnerGoal;
+    private static final int OWNER_FOLLOW_PRIORITY = 7;
+    private boolean ownerFollowPaused = false;
+    private boolean followGoalAdded = false;
+// --- Owner-follow gating (stability + proximity) ---
+    private int headStableTicks = 0;                // counts how long we've been the head
+    private static final int HEAD_STABLE_REQUIRED = 120; // 6s @ 20tps
+    private static final float OWNER_ENABLE_DIST   = 12.0F; // must be within this to enable
+
+    // --- Debug logging ---
+    private static final Logger LOG = LogUtils.getLogger();
+    /** Flip to false to silence all duck debug logs without rebuilding logic. */
+    private static final boolean DEBUG_DUCKS = true;
+
+
+
     // Ducks like seeds (same as chickens)
     private static final Ingredient DUCK_FOOD = Ingredient.of(
     Items.WHEAT_SEEDS,
@@ -97,6 +118,7 @@ public class DuckEntity extends Animal implements GeoEntity {
 
     /** Attempts to claim the given duck as our follower (tail). */
     public boolean claimFollower(DuckEntity duck) {
+        if (this.isBaby() || duck == null || duck.isBaby()) return false; // any invalid ⇒ reject
         if (this.followedBy == null || !this.followedBy.isAlive()) {
             this.followedBy = duck;
             return true;
@@ -108,10 +130,21 @@ public class DuckEntity extends Animal implements GeoEntity {
         if (this.followedBy == duck) this.followedBy = null;
     }
     /** Sets the leader this duck follows (may be null to detach). */
-    public void setLeader(@Nullable DuckEntity newLeader) {
-        this.following = newLeader;
-    }
-    /** GeckoLib controller: switches idle/walk based on movement. */    @Override
+   public void setLeader(@org.jetbrains.annotations.Nullable DuckEntity newLeader) {
+    if (this.isBaby()) return;                      // babies don’t join custom chains
+    if (newLeader != null && newLeader.isBaby()) return; // can’t follow a baby
+    
+    
+    final DuckEntity prev = this.following;
+    this.following = newLeader;
+    this.headStableTicks = 0; // reset stability on leader change
+    dbg("leader set: {} -> {}", prev == null ? "null" : prev.getId(), newLeader == null ? "null" : newLeader.getId());
+    updateOwnerFollowGoal();
+}
+
+
+    /** GeckoLib controller: switches idle/walk based on movement. */    
+    @Override
     public void registerControllers(ControllerRegistrar controllers) {
         controllers.add(new software.bernie.geckolib.animatable.processing.AnimationController<>(
             "main",
@@ -139,7 +172,6 @@ public class DuckEntity extends Animal implements GeoEntity {
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return cache;
     }
-
     // --- Sound Getters ---
     @Override
     protected net.minecraft.sounds.SoundEvent getAmbientSound() {
@@ -155,6 +187,174 @@ public class DuckEntity extends Animal implements GeoEntity {
     protected net.minecraft.sounds.SoundEvent getDeathSound() {
         return mc.quackedducks.sound.QuackedSounds.DUCK_DEATH.get();
     }
+/**
+ * Debug logger with consistent context (id/tame/leader/paused/goalAdded).
+ * Does nothing when {@code DEBUG_DUCKS} is false.
+ */
+private void dbg(String fmt, Object... args) {
+    if (!DEBUG_DUCKS) return;
+    String sfmt = fmt.replace("{}", "%s");
+    LOG.info("[duck id={} tame={} leader={} paused={} goalAdded={}] {}",
+            this.getId(), this.isTame(), this.isLeader(), this.ownerFollowPaused, this.followGoalAdded,
+            String.format(sfmt, args));
+}
+
+
+    /** @return true if this duck is a leader (not following another duck). */
+    public boolean isLeader() {
+        return !this.isBaby() && this.getLeader() == null;
+    }
+
+
+    /** Keep the owner-follow goal in sync with leader/paused/tame state (and log transitions). */
+private void updateOwnerFollowGoal() {
+    if (this.followOwnerGoal == null) return;
+
+    boolean nearOwner = false;
+    if (this.isTame()) {
+        final var owner = this.getOwner();
+        if (owner != null) nearOwner = this.distanceTo(owner) < OWNER_ENABLE_DIST;
+    }
+
+    final boolean head        = (!this.isBaby() && this.isLeader());
+    final boolean stableHead  = head && this.headStableTicks >= HEAD_STABLE_REQUIRED;
+
+    // ADD the goal only when near owner and head has been stable long enough
+    final boolean shouldAdd    = this.isTame() && !this.ownerFollowPaused && stableHead && nearOwner;
+
+    // REMOVE the goal only when it truly becomes invalid (do NOT remove just because nearOwner is false)
+    final boolean shouldRemove = !this.isTame() || this.ownerFollowPaused || !head || this.isBaby();
+
+    if (shouldAdd && !followGoalAdded) {
+        this.goalSelector.addGoal(OWNER_FOLLOW_PRIORITY, this.followOwnerGoal);
+        followGoalAdded = true;
+        dbg("follow-goal ADDED (prio={}, stableTicks={}, nearOwner={})", OWNER_FOLLOW_PRIORITY, this.headStableTicks, nearOwner);
+    } else if (followGoalAdded && shouldRemove) {
+        this.goalSelector.removeGoal(this.followOwnerGoal);
+        followGoalAdded = false;
+        dbg("follow-goal REMOVED (tame={}, paused={}, stableTicks={}, nearOwner={})", this.isTame(), this.ownerFollowPaused, this.headStableTicks, nearOwner);
+    }
+}
+
+
+    /*
+     * --- Taming stability fix ---
+     * Tracks how long the duck has been a stable head (not following, not a baby)
+     * and only allows taming if stable for 1min.
+     * // Resets if it becomes a follower or a baby.
+     * Prevents random teleporting when taming a migrating duck.
+     */
+    @Override
+    public void tick() {
+        super.tick();
+
+        if (!level().isClientSide) {
+            // Head = adult with no predecessor (uses your existing isLeader())
+            if (!this.isBaby() && this.isLeader()) {
+                headStableTicks = Math.min(headStableTicks + 1, HEAD_STABLE_REQUIRED + 200);
+            } else {
+                headStableTicks = 0;
+            }
+
+            // Re-evaluate goal attachment periodically (cheap)
+            if ((this.tickCount % 10) == 0) { // every 0.5s
+                updateOwnerFollowGoal();
+            }
+        }
+    }
+
+
+
+/**
+ * Handles right-click interaction for taming and for pausing owner-follow (leader only).
+ *
+ * Behavior:
+ * 1) Taming: if this duck is not yet tamed and the held item is accepted by
+ *    {@link #isFood(ItemStack)}, one item is consumed in Survival
+ *    (unless {@code player.getAbilities().instabuild} is true), {@link #tame(Player)}
+ *    is invoked to set owner/tame, the entity is marked persistent via {@link #setPersistenceRequired()},
+ *    a default name is applied if this duck is a leader and has no custom name, {@link #updateOwnerFollowGoal()}
+ *    is called to sync goals, and heart particles are emitted (entity event {@code 7}).
+ *    Returns {@link InteractionResult#SUCCESS} on the client and
+ *    {@link InteractionResult#SUCCESS_SERVER} on the server.
+ *
+ * 2) Pause/resume owner-follow: if already tamed, the interacting player is the owner, this duck is a leader,
+ *    the player is sneaking, and the hand is empty, flips a custom “ownerFollowPaused” flag and calls
+ *    {@link #updateOwnerFollowGoal()} to add/remove the follow-owner goal at runtime.
+ *    Returns {@link InteractionResult#SUCCESS} (client) or
+ *    {@link InteractionResult#SUCCESS_SERVER} (server).
+ *
+ * 3) Otherwise, defers to {@code super.mobInteract(player, hand)}.
+ *
+ * Note: applying a name with a renamed Name Tag is handled by
+ * {@link net.minecraft.world.item.NameTagItem} before this method runs.
+ *
+ * @param player the interacting {@link Player}
+ * @param hand   the {@link InteractionHand} used for the interaction
+ * @return {@link InteractionResult#SUCCESS} on client or
+ *         {@link InteractionResult#SUCCESS_SERVER} on server for the handled cases;
+ *         otherwise the result from {@code super}
+ */
+
+    @Override
+public InteractionResult mobInteract(Player player, InteractionHand hand) {
+    
+    final ItemStack stack = player.getItemInHand(hand);
+    final boolean client = level().isClientSide;
+
+    // Pause/resume owner-follow: sneak + empty hand by owner (leader only)
+    if (this.isTame() && this.isOwnedBy(player)
+        && player.isShiftKeyDown() && stack.isEmpty()) {
+        if (!client) {
+            this.ownerFollowPaused = !this.ownerFollowPaused;
+            dbg("pause toggled -> {}", this.ownerFollowPaused);
+            updateOwnerFollowGoal();
+        }
+        return client ? InteractionResult.SUCCESS
+                      : InteractionResult.SUCCESS_SERVER;
+    }
+
+    // Tame with existing food (seeds)
+    if (!this.isTame() && this.isFood(stack)) {
+        if (!client) {
+            if (!player.getAbilities().instabuild) stack.shrink(1);
+            this.tame(player);
+            this.setPersistenceRequired();
+            dbg("tamed by {}", player.getName().getString());
+            updateOwnerFollowGoal();           // ensures follow state matches policy
+            level().broadcastEntityEvent(this, (byte)7); // hearts
+        }
+        return client ? InteractionResult.SUCCESS
+                      : InteractionResult.SUCCESS_SERVER;
+    }
+
+    return super.mobInteract(player, hand);
+}
+
+
+
+
+    /*
+    *  --- Persistence ---
+    * Saves/restores the custom "owner-follow paused" state.
+    */
+@Override
+protected void addAdditionalSaveData(ValueOutput out) {
+    super.addAdditionalSaveData(out);
+    out.putBoolean("OwnerFollowPaused", this.ownerFollowPaused);
+    dbg("save: OwnerFollowPaused={}", this.ownerFollowPaused);
+}
+
+@Override
+protected void readAdditionalSaveData(ValueInput in) {
+    super.readAdditionalSaveData(in);
+    this.ownerFollowPaused = in.getBooleanOr("OwnerFollowPaused", false);
+    dbg("load: OwnerFollowPaused={}", this.ownerFollowPaused);
+    updateOwnerFollowGoal();
+}
+
+    
+
 
     /**
      * Base attributes for ducks.
@@ -181,7 +381,10 @@ public class DuckEntity extends Animal implements GeoEntity {
     this.goalSelector.addGoal(4, new AvoidEntityGoal<>(this, Bee.class,     8.0F, 1.0D, 1.25D));
     this.goalSelector.addGoal(5, new AvoidEntityGoal<>(this, PolarBear.class, 12.0F, 1.0D, 1.25D));
     this.goalSelector.addGoal(6, new BreedGoal(this, 1.0D));
-
+    //goofy interrrupts go above taming and below breeding.
+    // Construct once; updateOwnerFollowGoal() decides when it’s active
+    this.followOwnerGoal = new FollowOwnerGoal(this, 1.05D, 8.0F, 44.0F);
+    updateOwnerFollowGoal(); // set initial state based on tame/leader/paused
 
     // Custom behavior : leading duck occasional migration Interrupt
     this.goalSelector.addGoal(8, new mc.quackedducks.entities.ai.LeaderMigrationGoal(
