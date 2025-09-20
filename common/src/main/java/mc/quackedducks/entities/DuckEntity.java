@@ -202,7 +202,7 @@ private void dbg(String fmt, Object... args) {
 
     /** @return true if this duck is a leader (not following another duck). */
     public boolean isLeader() {
-        return this.getLeader() == null;
+        return !this.isBaby() && this.getLeader() == null;
     }
 
 
@@ -347,7 +347,7 @@ protected void readAdditionalSaveData(ValueInput in) {
     this.goalSelector.addGoal(6, new BreedGoal(this, 1.0D));
     //goofy interrrupts go above taming and below breeding.
     // Construct once; updateOwnerFollowGoal() decides when it’s active
-    this.followOwnerGoal = new FollowOwnerGoal(this, 1.05D, 8.0F, 27.0F);
+    this.followOwnerGoal = new FollowOwnerGoal(this, 1.05D, 8.0F, 22.0F);
     updateOwnerFollowGoal(); // set initial state based on tame/leader/paused
 
     // Custom behavior : leading duck occasional migration Interrupt

@@ -54,7 +54,7 @@ public class QuackEntityTypes {
     );
 
 
-        DUCK = registerEntityType("duck", () -> EntityType.Builder.of(DuckEntity::new, MobCategory.CREATURE) //todo play with values and properties
+        DUCK = registerEntityType("duck", () -> EntityType.Builder.of(DuckEntity::new, MobCategory.CREATURE)
                 .sized(0.75f, 0.95f) // was 0.9f and 1.4f
                 .eyeHeight(0.95f) //eyes are pretty much at height.
                 .passengerAttachments(1.36875f)
