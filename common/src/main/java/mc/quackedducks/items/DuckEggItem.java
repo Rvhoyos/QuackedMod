@@ -1,9 +1,10 @@
 package mc.quackedducks.items;
 
 import net.minecraft.world.InteractionResult;
-
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-
+import net.minecraft.world.level.Level;
+import net.minecraft.world.InteractionHand;
 /**
  * Duck egg item that throws a {@link mc.quackedducks.entities.projectile.DuckEggEntity}
  * when used.
@@ -33,13 +34,22 @@ public class DuckEggItem extends Item {
      * @return client: {@link InteractionResult#SUCCESS}, server: {@link InteractionResult#CONSUME}
      */
     @Override
-    public net.minecraft.world.InteractionResult use(
-            net.minecraft.world.level.Level level,
-            net.minecraft.world.entity.player.Player player,
-            net.minecraft.world.InteractionHand hand) {
+    public InteractionResult use(
+            Level level,
+            Player player,
+            InteractionHand hand) {
 
         var stack = player.getItemInHand(hand);
         player.awardStat(net.minecraft.stats.Stats.ITEM_USED.get(this));
+        // Play vanilla egg throw sound (server broadcasts to nearby clients)
+        level.playSound(
+            null,
+            player.getX(), player.getY(), player.getZ(),
+            net.minecraft.sounds.SoundEvents.EGG_THROW,
+            net.minecraft.sounds.SoundSource.PLAYERS,
+            0.5F,
+            0.4F / (player.getRandom().nextFloat() * 0.4F + 0.8F)
+        );
         // Spawn and launch the projectile server-side only
         if (!level.isClientSide) {
             var proj = new mc.quackedducks.entities.projectile.DuckEggEntity(level, player);

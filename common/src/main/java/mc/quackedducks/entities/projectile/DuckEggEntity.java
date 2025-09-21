@@ -64,6 +64,52 @@ public class DuckEggEntity extends ThrowableItemProjectile {
         this.discard();
     }
 }
+    /**
+     * Client-side handler for custom entity events.
+     *
+     * Purpose:
+     * - Renders the egg impact effect when the server broadcasts (byte) 3.
+     * - Spawns item particles that visually "crack" the egg on hit.
+     *
+     * Call flow:
+     * - Server: level().broadcastEntityEvent(this, (byte) 3) in onHit(...)
+     * - Client: Minecraft calls handleEntityEvent on the matching client entity
+     *
+     * Parameters:
+     * - id: event identifier sent by the server
+     *
+     * Behavior:
+     * - If id == 3:
+     *   - Emit 8 Item particles using this projectile's item stack
+     *   - Return without calling the superclass
+     * - Otherwise:
+     *   - Defer to the superclass
+     *
+     * Notes:
+     * - This method runs on the client. Do not spawn or modify server entities here.
+     * - Pair this with a sound played server-side in onHit(...) if you want audio.
+     */
+
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == 3) {
+            // client-side hatch/impact particles (egg cracks)
+            final net.minecraft.world.item.ItemStack stack = this.getItem(); // <- use getItem()
+            for (int i = 0; i < 8; ++i) {
+                this.level().addParticle(
+                    new net.minecraft.core.particles.ItemParticleOption(
+                        net.minecraft.core.particles.ParticleTypes.ITEM, stack),
+                    this.getX(), this.getY(), this.getZ(),
+                    (this.random.nextDouble() - 0.5D) * 0.08D,
+                    (this.random.nextDouble() - 0.5D) * 0.08D,
+                    (this.random.nextDouble() - 0.5D) * 0.08D
+                );
+            }
+            return; // don’t fall through
+        }
+        super.handleEntityEvent(id);
+    }
+
 
      /**
      * Vanilla-like hatch logic (1/8; if hatch then 1/32 for quads).
