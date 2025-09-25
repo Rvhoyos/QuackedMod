@@ -17,9 +17,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
-import java.util.IdentityHashMap;
-import java.util.Map;
-
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -95,8 +92,15 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     // one-shot playback lock (add these)
     private int oneShotLockTicks = 0;          // ticks left while a one-shot plays
     private RawAnimation currentOneShot = null;
+    // -- hopefully the fix for desync / animation cut offs --
+    private int lastTickSeen = -1;
 
-    // Ducks like seeds - TODO add breadcrumb item.
+    // --- Movement tuning (leader vs follower) ---
+    private static final double FOLLOWER_SPEED        = 1.10D;          // FollowLeaderIfFreeGoal currently uses 1.10
+    private static final double LEADER_MIGRATE_SPEED  = FOLLOWER_SPEED + 0.02D;  // 1.12 — tiny bump
+    private static final double AMBIENT_STROLL_SPEED  = 1.08D;          // non-leader/random strolling a touch slower
+
+    // Ducks like seeds - TODO: add breadcrumb item.
     private static final Ingredient DUCK_FOOD = Ingredient.of(
     Items.WHEAT_SEEDS,
     Items.BEETROOT_SEEDS,
@@ -167,68 +171,71 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     /** GeckoLib controller: switches idle/walk based on movement. 
      * one shot animation lengths must be tracked manually by tick length.
      * */    
-        @Override
-        public void registerControllers(ControllerRegistrar controllers) {
-            controllers.add(new software.bernie.geckolib.animatable.processing.AnimationController<>(
-                "main",
-                2, // small blend for smoother returns
-                state -> {
-                    // 0) Keep an active one-shot until it finishes (ALWAYS wins)
-                    if (oneShotLockTicks > 0 && currentOneShot != null) {
-                        state.setAndContinue(currentOneShot);
-                        oneShotLockTicks--;
-                        // dbg for confirmation
-                        dbg("anim hold -> %s (lock=%d)", currentOneShot == PECK ? "PECK" : "SHAKE", oneShotLockTicks);
-                        if (oneShotLockTicks <= 0) currentOneShot = null;
-                        return PlayState.CONTINUE;
-                    }
+   @Override
+    public void registerControllers(ControllerRegistrar controllers) {
+        controllers.add(new software.bernie.geckolib.animatable.processing.AnimationController<>(
+            "main",
+            2, // small blend for smoother returns
+            state -> {
+                // ---- TICK GATE (prevents frame-rate based cutoff) ----
+                final int tickNow = this.tickCount;                // increases at ~20 TPS; doesn't advance while paused
+                if (lastTickSeen < 0) lastTickSeen = tickNow;      // init on first call
+                final int tickDelta = tickNow - lastTickSeen;      // 0 on render frames between ticks
+                if (tickDelta > 0) {
+                    if (oneShotLockTicks > 0) oneShotLockTicks = Math.max(0, oneShotLockTicks - tickDelta);
+                    if (idleVariantCooldown > 0) idleVariantCooldown = Math.max(0, idleVariantCooldown - tickDelta);
+                    lastTickSeen = tickNow;
+                }
 
-                    // 1) Walk only if truly moving (avoid micro-jitter)
-                    final boolean pathing = !this.getNavigation().isDone() && this.getNavigation().getPath() != null;
-                    final double horizVel2 = this.getDeltaMovement().horizontalDistanceSqr();
-                    final boolean fastEnough = horizVel2 > 0.0001D; // was 0.0015; squared threshold — this is ~0.01 m/s
-                    if ((pathing || fastEnough) && state.isMoving()) {
-                        state.setAndContinue(WALK);
-                        // dbg("anim -> WALK (pathing=%s vel2=%.5f)", pathing, horizVel2);
-                        return PlayState.CONTINUE;
-                    }
-
-                    // 2) Idle with slower, rarer ambient variants
-                    if (idleVariantCooldown <= 0) {
-                        if (this.random.nextInt(5) == 0) { // 20% chance when eligible
-                            if (this.random.nextBoolean()) {
-                                currentOneShot = PECK;
-                                oneShotLockTicks = 37; // ~1.833s @20tps (matches your JSON)
-                                state.setAndContinue(PECK);
-                                dbg("Triggered PECK");
-                            } else {
-                                currentOneShot = SHAKE;
-                                oneShotLockTicks = 29; // ~1.417s (matches your JSON)
-                                state.setAndContinue(SHAKE);
-                                dbg("Triggered SHAKE");
-                            }
-                        } else {
-                            state.setAndContinue(IDLE);
-                            // dbg("anim -> IDLE");
-                        }
-                        // ~9–11s between ambient attempts
-                        idleVariantCooldown = 180 + this.random.nextInt(60);
-                    } else {
-                        state.setAndContinue(IDLE);
-                        idleVariantCooldown--;
-                    }
-
+                // 0) Keep an active one-shot until it finishes (ALWAYS wins)
+                if (oneShotLockTicks > 0 && currentOneShot != null) {
+                    state.setAndContinue(currentOneShot);
+                    dbg("HOLD one-shot -> %s | lock=%d (tickDelta=%d)", currentOneShot == PECK ? "PECK" : "SHAKE", oneShotLockTicks, tickDelta);
+                    if (oneShotLockTicks <= 0) currentOneShot = null;
                     return PlayState.CONTINUE;
                 }
-            ));
-        }
 
+                // 1) Walk only if truly moving (avoid micro-jitter)
+                final boolean pathing = !this.getNavigation().isDone() && this.getNavigation().getPath() != null;
+                final double horizVel2 = this.getDeltaMovement().horizontalDistanceSqr();
+                final boolean fastEnough = horizVel2 > 0.0001D; // squared threshold — ~0.01 m/s
+                if ((pathing || fastEnough) && state.isMoving()) {
+                    state.setAndContinue(WALK);
+                    // dbg("ANIM -> WALK (pathing=%s vel2=%.5f)", pathing, horizVel2);
+                    return PlayState.CONTINUE;
+                }
 
+                // 2) Idle with slower, rarer ambient variants (cooldown now tick-based)
+                if (idleVariantCooldown <= 0) {
+                    if (this.random.nextInt(5) == 0) { // 20% chance when eligible
+                        state.controller().forceAnimationReset(); // restart if already playing
+                        if (this.random.nextBoolean()) {
+                            currentOneShot = PECK;
+                            oneShotLockTicks = 50; // 1.833s @ 20 tps (matches your JSON)
+                            state.setAndContinue(PECK);
+                            dbg("TRIGGER -> PECK (lock=%d)", oneShotLockTicks);
+                        } else {
+                            currentOneShot = SHAKE;
+                            oneShotLockTicks = 45; // 1.417s @ 20 tps (matches your JSON)
+                            state.setAndContinue(SHAKE);
+                            dbg("TRIGGER -> SHAKE (lock=%d)", oneShotLockTicks);
+                        }
+                    } else {
+                        state.setAndContinue(IDLE);
+                        // dbg("ANIM -> IDLE (ambient skipped)");
+                    }
+                    // ~9–11s between ambient attempts at 20 tps
+                    idleVariantCooldown = 180 + this.random.nextInt(60);
+                    dbg("Ambient window RESET -> %d ticks", idleVariantCooldown);
+                } else {
+                    state.setAndContinue(IDLE);
+                    // dbg("ANIM -> IDLE | ambientCooldown=%d (tickDelta=%d)", idleVariantCooldown, tickDelta);
+                }
 
-
-
-
-
+                return PlayState.CONTINUE;
+            }
+        ));
+    }
 
 
 
@@ -521,25 +528,24 @@ protected void registerGoals() {
 
     // 7: Follow owner (constructed once; we add/remove dynamically)
     this.followOwnerGoal = new FollowOwnerGoal(this, 1.05D, 8.0F, 44.0F);
-    updateOwnerFollowGoal();
 
-    // 8: Migration (leader-only), every 3–6 mins
-    this.goalSelector.addGoal(8, new mc.quackedducks.entities.ai.LeaderMigrationGoal(this, 1.1D, 3600, 7200));
+    this.goalSelector.addGoal(8, new mc.quackedducks.entities.ai.LeaderMigrationGoal(this, LEADER_MIGRATE_SPEED, 3600, 7200));
 
     // 10: Lay eggs
     this.goalSelector.addGoal(10, new mc.quackedducks.entities.ai.LayEggGoal(this, 9000, 100000, mc.quackedducks.items.QuackyModItems.duckEggSupplier()));
 
     // 11: Follow leader (chain)
-    this.goalSelector.addGoal(11, new mc.quackedducks.entities.ai.FollowLeaderIfFreeGoal(this, 1.1D, 18.0F, 4.2F, 2.0F));
+    this.goalSelector.addGoal(11,
+        new mc.quackedducks.entities.ai.FollowLeaderIfFreeGoal(this, FOLLOWER_SPEED, 18.0F, 4.2F, 2.0F));
 
     // 12: Tempt (seeds)
-    this.goalSelector.addGoal(12, new TemptGoal(this, 1.5D, DUCK_FOOD, false));
+    this.goalSelector.addGoal(12, new TemptGoal(this, 1.1D, DUCK_FOOD, false));
 
     // 13: Follow parent (babies)
     this.goalSelector.addGoal(13, new FollowParentGoal(this, 1.1D));
 
     // 14–16: Ambient
-    this.goalSelector.addGoal(14, new RandomStrollGoal(this, 1.1D));
+    this.goalSelector.addGoal(14, new RandomStrollGoal(this, AMBIENT_STROLL_SPEED));
     this.goalSelector.addGoal(15, new LookAtPlayerGoal(this, Player.class, 6.0F));
     this.goalSelector.addGoal(16, new RandomLookAroundGoal(this));
 }
