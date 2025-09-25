@@ -1,11 +1,18 @@
 package mc.quackedducks.entities.projectile;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import mc.quackedducks.entities.QuackEntityTypes;
 import mc.quackedducks.items.QuackyModItems;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.entity.Entity;
+
+
+
+
 /**
  * Throwable duck egg projectile.
  *
@@ -57,13 +64,36 @@ public class DuckEggEntity extends ThrowableItemProjectile {
     @Override
     protected void onHit(HitResult result) {
     // no super; we fully handle impact
+
+    // handle entity hit specifically
+    if (result.getType() == HitResult.Type.ENTITY) {
+        this.onHitEntity((net.minecraft.world.phys.EntityHitResult) result);
+    }
     if (!this.level().isClientSide) {
         hatchBabies();
-        //TODO: do damage to entities? or do knock back only?
-        this.level().broadcastEntityEvent(this, (byte)3); // impact particles (doesnt work)
+        this.level().broadcastEntityEvent(this, (byte)3); // impact particles
         this.discard();
     }
 }
+    /*
+    * Handle entity hit specifically (not block hit).
+    */
+    @Override
+    protected void onHitEntity(net.minecraft.world.phys.EntityHitResult hit) {
+        final net.minecraft.world.entity.Entity target = hit.getEntity();
+
+        // server-side damage only
+        if (!this.level().isClientSide) {
+            final net.minecraft.server.level.ServerLevel server = (net.minecraft.server.level.ServerLevel) this.level();
+            final net.minecraft.world.damagesource.DamageSource src =
+                server.damageSources().thrown(this, this.getOwner());
+
+            // use the new 1.21+ side-split API
+            target.hurtServer(server, src, 2.0F); // adjust damage as you like
+        }
+
+    }
+
     /**
      * Client-side handler for custom entity events.
      *
