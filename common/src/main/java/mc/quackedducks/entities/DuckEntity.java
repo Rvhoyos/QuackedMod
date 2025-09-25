@@ -99,6 +99,10 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     private static final double FOLLOWER_SPEED        = 1.10D;          // FollowLeaderIfFreeGoal currently uses 1.10
     private static final double LEADER_MIGRATE_SPEED  = FOLLOWER_SPEED + 0.02D;  // 1.12 — tiny bump
     private static final double AMBIENT_STROLL_SPEED  = 1.08D;          // non-leader/random strolling a touch slower
+    // fields
+    private final float idleSpeedMul = 0.9f + this.getRandom().nextFloat() * 0.2f; // 0.9–1.1
+    private int idlePhaseDelay = 0;
+    private boolean wasIdle = false;
 
     // Ducks like seeds - TODO: add breadcrumb item.
     private static final Ingredient DUCK_FOOD = Ingredient.of(
@@ -176,7 +180,10 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         controllers.add(new software.bernie.geckolib.animatable.processing.AnimationController<>(
             "main",
             2, // small blend for smoother returns
-            state -> {
+            state -> { 
+                // TODO registerController refactor and debug to see how many of these gates are actuall necessary. 
+                // They were possibly added before finding a fox to cut off animations.
+                // TODO : Add ROTATION debug, explore spinning  
                 // ---- TICK GATE (prevents frame-rate based cutoff) ----
                 final int tickNow = this.tickCount;                // increases at ~20 TPS; doesn't advance while paused
                 if (lastTickSeen < 0) lastTickSeen = tickNow;      // init on first call
@@ -211,12 +218,12 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                         state.controller().forceAnimationReset(); // restart if already playing
                         if (this.random.nextBoolean()) {
                             currentOneShot = PECK;
-                            oneShotLockTicks = 50; // 1.833s @ 20 tps (matches your JSON)
+                            oneShotLockTicks = 65; // match json + buffer for full animations
                             state.setAndContinue(PECK);
                             dbg("TRIGGER -> PECK (lock=%d)", oneShotLockTicks);
                         } else {
                             currentOneShot = SHAKE;
-                            oneShotLockTicks = 45; // 1.417s @ 20 tps (matches your JSON)
+                            oneShotLockTicks = 55; // match json + buffer for full animations
                             state.setAndContinue(SHAKE);
                             dbg("TRIGGER -> SHAKE (lock=%d)", oneShotLockTicks);
                         }
