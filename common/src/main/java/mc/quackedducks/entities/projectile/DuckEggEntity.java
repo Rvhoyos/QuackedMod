@@ -1,14 +1,12 @@
 package mc.quackedducks.entities.projectile;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import mc.quackedducks.entities.QuackEntityTypes;
 import mc.quackedducks.items.QuackyModItems;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.entity.Entity;
+
 
 
 

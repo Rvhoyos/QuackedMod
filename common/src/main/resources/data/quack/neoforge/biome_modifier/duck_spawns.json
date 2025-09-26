@@ -1,7 +1,0 @@
-{
-  "type": "neoforge:add_spawns",
-  "biomes": "#c:is_overworld",
-  "spawners": [
-    { "type": "quack:duck", "weight": 80, "minCount": 2, "maxCount": 4 }
-  ]
-}
