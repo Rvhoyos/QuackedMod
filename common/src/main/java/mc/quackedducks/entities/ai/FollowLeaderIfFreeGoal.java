@@ -21,7 +21,7 @@ import net.minecraft.world.phys.AABB;
  */
 public class FollowLeaderIfFreeGoal extends Goal {
 
-    private static final double FAR_MULTIPLIER = 2.25; // “really far” threshold = (startDist * FAR_MULTIPLIER)^2
+   //private static final double FAR_MULTIPLIER = 2.25; // “really far” threshold = (startDist * FAR_MULTIPLIER)^2
     private final DuckEntity duck;
     private DuckEntity leader;          // set when goal starts; cleared on stop
     private final double speed;         // base speed (used when far)

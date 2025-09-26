@@ -11,6 +11,7 @@ import mc.quackedducks.sound.QuackedSounds;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.biome.MobSpawnSettings;
+import mc.quackedducks.config.QuackedConfig;
 /**
  * Common entrypoint and shared bootstrap.
  *
@@ -31,48 +32,6 @@ public final class QuackMod {
 
     
     /**
-     * Biomes that should naturally spawn ducks.
-     *
-     * Notes:
-     * - Overworld grassland/forest/wetland-style biomes are targeted.
-     * - This is used by the biome modification below to attach spawn entries.
-     */
-    private static final Set<ResourceLocation> DUCK_BIOMES = Set.of(
-    // Temperate/flowery
-    ResourceLocation.fromNamespaceAndPath("minecraft", "plains"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "sunflower_plains"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "forest"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "flower_forest"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "birch_forest"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "dark_forest"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "old_growth_birch_forest"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "meadow"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "cherry_grove"),
-
-    // Wetlands / rivers / shores
-    ResourceLocation.fromNamespaceAndPath("minecraft", "swamp"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "mangrove_swamp"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "river"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "frozen_river"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "beach"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "snowy_beach"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "stony_shore"),
-
-    // Taiga & cool forests
-    ResourceLocation.fromNamespaceAndPath("minecraft", "taiga"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "snowy_taiga"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "old_growth_pine_taiga"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "old_growth_spruce_taiga"),
-
-    // Savanna (grassland-ish)
-    ResourceLocation.fromNamespaceAndPath("minecraft", "savanna"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "savanna_plateau"),
-
-    // Windswept (forested/grass, not the gravel badlands)
-    ResourceLocation.fromNamespaceAndPath("minecraft", "windswept_forest"),
-    ResourceLocation.fromNamespaceAndPath("minecraft", "windswept_hills")
-);
-    /**
      * Common initialization.
      *
      * Steps:
@@ -88,36 +47,39 @@ public final class QuackMod {
         QuackEntityTypes.init(); // Initialize entities (duck)
         QuackedSounds.init(); // Initialize sounds (duck)
         QuackyModItems.init(); // Initialize items
-      
+        //*Load config */
+        final QuackedConfig config = QuackedConfig.get();
+        final Set<ResourceLocation> duckBiomes = config.getDuckBiomes();
+       
+        for (String id : config.biomeAllowlist) {
+           try { duckBiomes.add(ResourceLocation.parse(id)); } catch (Exception ignored) {}
+        }
+
         // === Natural spawns (Architectury common) ===
-        // Plains, Swamp, River; weight 12; group 3–5 (biomes also mentioned elsewhere. one is for fabric other is neoforge)
+        // === Natural spawns (Architectury common) ===
         BiomeModifications.addProperties((ctx, props) -> {
             var keyOpt = ctx.getKey();
             if (keyOpt.isEmpty()) return;
             var key = keyOpt.get();
 
-            if (!DUCK_BIOMES.contains(key)) return;
+            if (!duckBiomes.contains(key)) return;
 
-            // heavier in water-heavy biomes so ducks tend to spawn at lakes/rivers
-            boolean veryWet =
-                key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "river")) ||
-                key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "frozen_river")) ||
-                key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "swamp")) ||
-                key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "mangrove_swamp")) ||
-                key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "beach")) ||
-                key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "stony_shore"));
+            // use config wet-biome list (Set<ResourceLocation>)
+            final var wetBiomes = config.getWetBiomes();
+            final boolean veryWet = wetBiomes.contains(key);
 
-            int weight = veryWet ? 24 : 12; // double weight near water
+            int weight = veryWet ? 24 : 12; // unchanged multiplier
 
             props.getSpawnProperties().addSpawn(
                 MobCategory.CREATURE,
                 new MobSpawnSettings.SpawnerData(
                     mc.quackedducks.entities.QuackEntityTypes.DUCK.get(),
-                    3, 5 // min, max group size
+                    3, 5
                 ),
                 weight
             );
         });
+
 
     }
 }
