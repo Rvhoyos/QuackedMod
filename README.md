@@ -12,19 +12,21 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 ![Issues](https://img.shields.io/github/issues/Rvhoyos/QuackedMod)
 ![Stars](https://img.shields.io/github/stars/Rvhoyos/QuackedMod?style=social)
 
-- Duck entity (ambient/hurt/death sounds, basic behaviors, follow/line logic, egg-laying).
-- Custom Duck entity AI keep ducks in a line or always in order.
-- Duck items, foods with crafts and recipes.
-- - [wiki](https://quackedmod.wiki/)
-- Natural spawns across selected overworld biomes (rivers, swamps, plains, forests, etc.).
-- Items: duck egg (throwable; chance to hatch ducklings), spawn egg, meat/food variants, feathers, more.
-- Fabric and NeoForge builds from the same codebase.
+- **Custom** GeckoLib model/animations.
+- **Follow‑the‑leader** behavior: flocks self‑organize into lines.
+- **Migration** bursts: the lead duck occasionally chooses a distant spot and the line ambles over.
+- **Natural spawns** across temperate, taiga, wetlands, rivers, and shores (rarer away from water).
+- **Tempted** with seeds; breeds like chickens.
+- **Quack**, hurt, and death sounds.
+- Duck **Eggs**, Ducks lay eggs periodically.
+- **Taming & Sitting the lead duck**: With food they eat! (Currently only available in a feature/pre-release branch)
+- **Customizable** JSON config, allows users / servers to include more biomes from the game or other mods. ( **Currently broken** )
+### Drops & Items
+- **Duck Meat** and Cooked Duck foods.
+- **Duck Feathers** for crafting.
+- **Duck‑feather Arrow** variant.
+- **Foie Gras** (late‑game food) with short, meaningful buffs.
 ---
-## Coming to V1.1
-- plug-in config for custom biomes (from other mods) and adjustbale spawn rate.
-- FIXING hitbox for ducks. _(Currently Investigating issue)_
-- more animations, sounds and textures.
-- flying ducks is a planned feature.
 ## Game/Loader Compatibility
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.21.8-informational)
 ![Loaders](https://img.shields.io/badge/Loaders-Fabric%20%7C%20NeoForge-informational)
@@ -33,7 +35,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - **Fabric:** Loader `0.17.2` (or newer), **Fabric API** required
 - **NeoForge:** `21.8.x`
 - **Shared libs (both loaders):** Architectury `17.0.8+`, GeckoLib `5.x`
-## Curse Forge & modrinth Installation:
+## Curse Forge & modrinth Installation (easy):
 - [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
 - [modrinth](https://modrinth.com/mod/ducky-quack-pack)
 ## Manual Installation (Client)
