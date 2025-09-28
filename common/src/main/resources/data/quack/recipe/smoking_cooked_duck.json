@@ -1,9 +1,9 @@
 {
     "type": "minecraft:smoking",
-    "ingredient": {
-        "item": "quack:raw_duck"
+    "ingredient":"quack:duck_meat",
+    "result": {
+        "id": "quack:cooked_duck"
     },
-    "result": "quack:cooked_duck",
     "experience": 0.35,
     "cookingtime": 100
 }

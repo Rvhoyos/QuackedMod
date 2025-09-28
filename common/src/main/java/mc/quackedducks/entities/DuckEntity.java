@@ -79,7 +79,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     // --- Debug logging ---
     private static final Logger LOG = LogUtils.getLogger();
     /** Flip to false to silence all duck debug logs without rebuilding logic. */
-    private static final boolean DEBUG_DUCKS = true;
+    private static final boolean DEBUG_DUCKS = false;
     
     // Duck States Enum
     private enum DuckState {
