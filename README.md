@@ -8,6 +8,8 @@
 
 A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natural spawns, sounds, items, and hatchable eggs. Built with Architectury to support both Fabric and NeoForge. GeckoLib5 for duck model and animations.
 >Find us on curseforge or modrinth website / client.
+
+[Mod Wiki Page](https://quackedmod.wiki/)
 ## Features
 ![Issues](https://img.shields.io/github/issues/Rvhoyos/QuackedMod)
 ![Stars](https://img.shields.io/github/stars/Rvhoyos/QuackedMod?style=social)
