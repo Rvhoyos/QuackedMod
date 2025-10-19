@@ -129,25 +129,15 @@ public class QuackyModItems {
         ));
 
 
-        // TODO: (Morning)
-        //
-        //- Arrow and egg projectile entities with flight animations
-        //- Add Drops/loot: entity loot table (feather/meat/cooked variants), balance numbers.
-        //-
-        //------------------------------------------------------------------------ THURS_NIGHT -> ?
-        //- Add foie gras food item with special effects (strength? speed? regeneration?)
-        //- - add empty foie gras bowl item that is returned on eating foie gras and make craft and not a common one for other mods maybe make it take a duck item to craft too.
-        // 
+        // TODO:
         //- Add a block that feeds ducks
         //- Add new duck leather/feather (armour or tool) material
         //- - could be extension of existing tool item with quacky abilities. 
         //- Add functional duck house to store and release ducks?
         //- - - see what's possible with existing villager mechanics
         //- - - - maybe add new villager profession that breeds ducks?
-        //
-        //--------- FRI -> ?
-        //- duck saddle? lol
-        //- duck shoots projectile?
+        //- duck saddle
+        //- duck shoots projectile
         //- GOOFY: make duck panic when player eats duck meat/foie gras nearby
         //- GOOFY: give saddled ducks ability fly and glide short distances
         //- GOOFY: Make saddled ducks have a "easter egg" / secret shortcut to enter turret mode and user can shoot projectiles from the duck and aimed with their mouse (or aimed with orientation of the duck).  

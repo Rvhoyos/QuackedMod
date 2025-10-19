@@ -107,7 +107,8 @@ public final class QuackMod {
                 key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "beach")) ||
                 key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "stony_shore"));
 
-            int weight = veryWet ? 24 : 12; // double weight near water
+            // SPAWN RATES 
+            int weight = veryWet ? 6 : 3; // double weight near water
 
             props.getSpawnProperties().addSpawn(
                 MobCategory.CREATURE,

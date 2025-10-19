@@ -274,13 +274,13 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
  * Debug logger with consistent context (id/tame/leader/paused/goalAdded).
  * Does nothing when {@code DEBUG_DUCKS} is false.
  */
-private void dbg(String fmt, Object... args) {
-    if (!DEBUG_DUCKS) return;
-    String sfmt = fmt.replace("{}", "%s");
-    LOG.info("[duck id={} tame={} leader={} paused={} goalAdded={}] {}",
-            this.getId(), this.isTame(), this.isLeader(), this.ownerFollowPaused, this.followGoalAdded,
-            String.format(sfmt, args));
-}
+    private void dbg(String fmt, Object... args) {
+        if (!DEBUG_DUCKS) return;
+        String sfmt = fmt.replace("{}", "%s");
+        LOG.info("[duck id={} tame={} leader={} paused={} goalAdded={}] {}",
+                this.getId(), this.isTame(), this.isLeader(), this.ownerFollowPaused, this.followGoalAdded,
+                String.format(sfmt, args));
+    }
 
 
     /** @return true if this duck is a leader (not following another duck). */
@@ -290,7 +290,7 @@ private void dbg(String fmt, Object... args) {
 
 
     /** Keep the owner-follow goal in sync with leader/paused/tame state (and log transitions). */
-private void updateOwnerFollowGoal() {
+    private void updateOwnerFollowGoal() {
     if (this.followOwnerGoal == null) return;
 
     boolean nearOwner = false;
@@ -535,7 +535,7 @@ protected void registerGoals() {
     this.goalSelector.addGoal(8, new mc.quackedducks.entities.ai.LeaderMigrationGoal(this, LEADER_MIGRATE_SPEED, 3600, 7200));
 
     // 10: Lay eggs
-    this.goalSelector.addGoal(10, new mc.quackedducks.entities.ai.LayEggGoal(this, 9000, 100000, mc.quackedducks.items.QuackyModItems.duckEggSupplier()));
+    this.goalSelector.addGoal(10, new mc.quackedducks.entities.ai.LayEggGoal(this, 36000, 400000, mc.quackedducks.items.QuackyModItems.duckEggSupplier()));
 
     // 11: Follow leader (chain)
     this.goalSelector.addGoal(11,
