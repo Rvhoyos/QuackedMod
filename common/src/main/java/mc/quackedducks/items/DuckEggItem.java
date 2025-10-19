@@ -59,8 +59,6 @@ public class DuckEggItem extends Item {
         }
         // Consume one egg unless in creative / instabuild
         if (!player.getAbilities().instabuild) stack.shrink(1);
-        // Mirror vanilla pattern: SUCCESS client-side (so the hand animates),
-        // CONSUME server-side (action handled
         return level.isClientSide ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
 
     }
