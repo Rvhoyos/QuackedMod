@@ -535,7 +535,7 @@ protected void registerGoals() {
     this.goalSelector.addGoal(8, new mc.quackedducks.entities.ai.LeaderMigrationGoal(this, LEADER_MIGRATE_SPEED, 3600, 7200));
 
     // 10: Lay eggs
-    this.goalSelector.addGoal(10, new mc.quackedducks.entities.ai.LayEggGoal(this, 36000, 400000, mc.quackedducks.items.QuackyModItems.duckEggSupplier()));
+    this.goalSelector.addGoal(10, new mc.quackedducks.entities.ai.LayEggGoal(this, 360000, 40000000, mc.quackedducks.items.QuackyModItems.duckEggSupplier()));
 
     // 11: Follow leader (chain)
     this.goalSelector.addGoal(11,
