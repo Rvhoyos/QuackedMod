@@ -53,7 +53,7 @@ public class QuackyModItems {
         //initialize items here
         DUCK_EGG = registerItem("duck_egg", () -> new DuckEggItem(
             baseProperties("duck_egg")
-                .stacksTo(16)// add custom projectile entity here and also to arrow item for flight animation.
+                .stacksTo(64)// add custom projectile entity here and also to arrow item for flight animation.
                 .arch$tab(CreativeModeTabs.FOOD_AND_DRINKS)
         ));
         DUCK_SPAWN_EGG = registerItem("duck_spawn_egg", () -> new SpawnEggItem(
@@ -80,7 +80,7 @@ public class QuackyModItems {
                             0.90f                                                // 90% chance
                         ))
                         .build())
-                .stacksTo(16)
+                .stacksTo(64)
                 .arch$tab(CreativeModeTabs.FOOD_AND_DRINKS)));
 
         DUCK_FEATHER = registerItem("duck_feather", () -> new Item(baseProperties("duck_feather").arch$tab(CreativeModeTabs.INGREDIENTS)));
@@ -95,7 +95,7 @@ public class QuackyModItems {
                         .nutrition(4)                 
                         .saturationModifier(0.8f)     
                         .build())
-                .stacksTo(16)            
+                .stacksTo(64)            
             .arch$tab(CreativeModeTabs.FOOD_AND_DRINKS)));
         
         FOIE_GRAS = registerItem("foie_gras", () -> new Item(
@@ -124,7 +124,7 @@ public class QuackyModItems {
                         ))
                         .build()
                 )
-                .stacksTo(1)
+                .stacksTo(64)
                 .arch$tab(CreativeModeTabs.FOOD_AND_DRINKS)
         ));
 
