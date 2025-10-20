@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "item": "quack:duck_spawn_egg" },
+    "icon": { "id": "quack:duck_egg" },
     "title": { "text": "Quack!" },
     "description": { "text": "Find a duck or pick up a duck egg." },
     "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png",
@@ -14,7 +14,7 @@
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
-          { "items": [ "quack:duck_egg" ] }
+          { "items": ["quack:duck_egg"] }
         ]
       }
     },

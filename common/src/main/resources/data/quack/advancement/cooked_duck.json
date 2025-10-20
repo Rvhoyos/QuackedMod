@@ -1,7 +1,7 @@
 {
   "parent": "quack:root",
   "display": {
-    "icon": { "item": "quack:cooked_duck" },
+    "icon": { "id": "quack:cooked_duck" },
     "title": { "text": "Quack Dinner" },
     "description": { "text": "Obtain cooked duck." },
     "frame": "task",

@@ -1,7 +1,7 @@
 {
   "parent": "quack:root",
   "display": {
-    "icon": { "item": "quack:duck_spawn_egg" },
+    "icon": { "id": "quack:duck_egg" },
     "title": { "text": "Duck, Duck… Duck!" },
     "description": { "text": "Breed two ducks." },
     "frame": "task",
