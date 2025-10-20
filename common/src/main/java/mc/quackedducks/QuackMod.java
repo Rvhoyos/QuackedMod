@@ -108,13 +108,13 @@ public final class QuackMod {
                 key.equals(ResourceLocation.fromNamespaceAndPath("minecraft", "stony_shore"));
 
             // SPAWN RATES 
-            int weight = veryWet ? 3 : 1; // double weight near water
+            int weight = veryWet ? 6 : 3; // double weight near water
 
             props.getSpawnProperties().addSpawn(
                 MobCategory.CREATURE,
                 new MobSpawnSettings.SpawnerData(
                     mc.quackedducks.entities.QuackEntityTypes.DUCK.get(),
-                    2, 4 // min, max group size
+                    1, 1 // min, max group size
                 ),
                 weight
             );
