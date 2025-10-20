@@ -27,7 +27,7 @@ public class LayEggGoal extends Goal{
     /** Minimum and maximum interval (in ticks) between egg lays. */
     private final int minIntervalTicks, maxIntervalTicks;
     private final Random rng = new Random();
-    private int cooldown=0;
+    private int cooldown;
 /**
      * @param self              the duck entity
      * @param minIntervalTicks  minimum ticks between egg lays (inclusive)
@@ -39,8 +39,8 @@ public class LayEggGoal extends Goal{
         this.eggItemSupplier = eggItemSupplier;
         this.minIntervalTicks = minIntervalTicks;
         this.maxIntervalTicks = maxIntervalTicks;
-        this.setFlags(EnumSet.noneOf(Flag.class)); 
-    }
+        this.setFlags(EnumSet.noneOf(Flag.class));
+        this.cooldown = 1 + rng.nextInt(Math.max(1, this.minIntervalTicks));    }
     /**
      * Server-only, adult-only; returns true exactly on the tick where the
      * internal cooldown reaches zero.
