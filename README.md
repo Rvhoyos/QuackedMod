@@ -4,7 +4,7 @@
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/ducky-quack-pack?label=Modrinth%20downloads)](https://modrinth.com/mod/ducky-quack-pack)
 [![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey)](#license)
 ---
-# QuackedDucks 1.1.1
+# QuackedDucks 1.1.2
 
 A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natural spawns, sounds, items, and hatchable eggs. Built with Architectury to support both Fabric and NeoForge. GeckoLib5 for duck model and animations.
 >Find us on curseforge or modrinth website / client.

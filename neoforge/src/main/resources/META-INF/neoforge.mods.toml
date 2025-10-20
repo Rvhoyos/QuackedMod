@@ -1,6 +1,6 @@
 modLoader = "javafml"
 loaderVersion = "[9,)"
-#issueTrackerURL = ""
+#issueTrackerURL = "https://github.com/rvhoyos/QuackMod/issues"
 license = "All Rights Reserved"
 
 [[mods]]
@@ -9,9 +9,10 @@ version = "${version}"
 displayName = "QuackedDucks"
 authors = "rvhoyos"
 description = '''
-New duck entity that resemble a rubber duck with custom items such as meat, cooked meat, foie gras with buffs and custom Duck AI behavior on land and water (flying coming soon!)
+New duck entity with custom items such as meat, cooked meat, foie gras with buffs and custom Duck AI behavior on land and water (flying coming soon!)
 '''
-#logoFile = "assets/quack/icon.png" # TODO MAKE LOGO FILE
+logoFile = "icon.png"
+
 
 [[dependencies.quack]]
 modId = "neoforge"

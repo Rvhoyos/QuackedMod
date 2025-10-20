@@ -3,7 +3,7 @@
   "id": "quack",
   "version": "${version}",
   "name": "QuackedDucks",
-  "description": "New duck entity that resemble a rubber duck with custom items such as meat, cooked meat, foie gras with buffs and custom Duck AI behavior on land and water (flying coming soon!)",
+  "description": "New duck entity with custom items such as meat, cooked meat, foie gras with buffs and custom Duck AI behavior on land and water (flying coming soon!)",
   "authors": [
     "rvhoyos"
   ],
