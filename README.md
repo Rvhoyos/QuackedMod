@@ -21,7 +21,7 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - **Tempted** with seeds; breeds like chickens.
 - **Quack**, hurt, and death sounds.
 - Duck **Eggs**, Ducks lay eggs periodically.
-- **Taming & Sitting the lead duck**: With food they eat! (Currently only available in a feature/pre-release branch)
+- **Taming & Sitting the lead duck**: With food they eat!
 - **Customizable** JSON config, allows users / servers to include more biomes from the game or other mods. ( **Currently broken** )
 ### Drops & Items
 - **Duck Meat** and Cooked Duck foods.
