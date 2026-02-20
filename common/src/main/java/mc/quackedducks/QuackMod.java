@@ -42,4 +42,21 @@ public final class QuackMod {
         QuackedSounds.init();
         QuackyModItems.init();
     }
+
+    public static java.util.function.Consumer<net.minecraft.server.level.ServerPlayer> CONFIG_OPENER = (p) -> {
+        LOGGER.warn("Config opener not initialized!");
+    };
+
+    public static void openConfigGui(net.minecraft.server.level.ServerPlayer player) {
+        CONFIG_OPENER.accept(player);
+    }
+
+    public static java.util.function.Consumer<mc.quackedducks.network.QuackNetwork.UpdateConfigPayload> PACKET_SENDER = (
+            p) -> {
+        LOGGER.warn("Packet sender not initialized!");
+    };
+
+    public static void sendConfigUpdate(mc.quackedducks.network.QuackNetwork.UpdateConfigPayload payload) {
+        PACKET_SENDER.accept(payload);
+    }
 }

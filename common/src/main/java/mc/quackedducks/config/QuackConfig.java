@@ -28,6 +28,19 @@ public class QuackConfig {
     public static class GenericDucks {
         public double maxHealth = 6.0;
         public double movementSpeed = 0.25;
+        public float duckWidth = 0.75f;
+        public float duckHeight = 0.95f;
+        public float duckEyeHeight = 0.95f;
+        public float babyScale = 0.5f;
+        public int ambientSoundInterval = 120;
+    }
+
+    public void validate() {
+        genericDucks.maxHealth = Math.clamp(genericDucks.maxHealth, 0.1, 1000.0);
+        genericDucks.movementSpeed = Math.clamp(genericDucks.movementSpeed, 0.05, 1.0);
+        genericDucks.duckWidth = Math.clamp(genericDucks.duckWidth, 0.1f, 5.0f);
+        genericDucks.duckHeight = Math.clamp(genericDucks.duckHeight, 0.1f, 5.0f);
+        genericDucks.ambientSoundInterval = Math.max(20, genericDucks.ambientSoundInterval);
     }
 
     public static class Spawning {
@@ -74,11 +87,11 @@ public class QuackConfig {
 
         // Version check
         if (instance.configVersion != CURRENT_VERSION) {
-            QuackMod.LOGGER.info("Quack config version mismatch (current: " + CURRENT_VERSION + ", file: "
-                    + instance.configVersion + "). Resetting to defaults.");
+            QuackMod.LOGGER.info("Quack config version mismatch. Resetting to defaults.");
             instance = new QuackConfig();
             save();
         }
+        instance.validate();
     }
 
     public static void save() {

@@ -26,6 +26,13 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
+import mc.quackedducks.command.QuackCommands;
+import mc.quackedducks.config.QuackConfig;
+import mc.quackedducks.network.QuackNetwork;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -197,6 +204,87 @@ public final class QuackModNeoForge {
 
                 modBus.addListener(QuackModNeoForge::onEntityAttributeCreation);
                 modBus.addListener(QuackModNeoForge::onCreativeModeTabBuild);
+                modBus.addListener(this::registerNetworking);
+
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(this::onPlayerLoggedIn);
+
+                // Common init
+                mc.quackedducks.config.QuackConfig.load(); // Ensure config is loaded on NeoForge side
+
+                // GUI Opener Hook
+                QuackMod.CONFIG_OPENER = (player) -> {
+                        player.connection.send(new QuackNetwork.OpenConfigGuiPayload());
+                };
+        }
+
+        private void onRegisterCommands(RegisterCommandsEvent event) {
+                mc.quackedducks.command.QuackCommands.register(event.getDispatcher());
+        }
+
+        private void onPlayerLoggedIn(
+                        net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+                if (event.getEntity() instanceof ServerPlayer player) {
+                        player.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
+                }
+        }
+
+        private void registerNetworking(final RegisterPayloadHandlersEvent event) {
+                final PayloadRegistrar registrar = event.registrar(QuackMod.MOD_ID).versioned("1.0");
+
+                registrar.configurationToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
+                                (payload, context) -> {
+                                        // Configuration sync during config phase
+                                        var c = QuackConfig.get().genericDucks;
+                                        c.duckWidth = payload.duckWidth();
+                                        c.duckHeight = payload.duckHeight();
+                                        c.movementSpeed = payload.movementSpeed();
+                                        c.ambientSoundInterval = payload.ambientSoundInterval();
+                                        QuackConfig.get().validate();
+                                });
+
+                registrar.playToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
+                                (payload, context) -> {
+                                        if (context.flow().isClientbound()) {
+                                                mc.quackedducks.neoforge.client.QuackNeoForgeClientNetworking
+                                                                .handleSyncConfig(payload, context);
+                                        }
+                                });
+
+                registrar.playToClient(QuackNetwork.OPEN_CONFIG_GUI, QuackNetwork.OpenConfigGuiPayload.STREAM_CODEC,
+                                (payload, context) -> {
+                                        if (context.flow().isClientbound()) {
+                                                mc.quackedducks.neoforge.client.QuackNeoForgeClientNetworking
+                                                                .handleOpenConfigGui(payload, context);
+                                        }
+                                });
+
+                registrar.playToServer(QuackNetwork.UPDATE_CONFIG, QuackNetwork.UpdateConfigPayload.STREAM_CODEC,
+                                (payload, context) -> {
+                                        context.enqueueWork(() -> {
+                                                var c = QuackConfig.get().genericDucks;
+                                                c.duckWidth = payload.duckWidth();
+                                                c.duckHeight = payload.duckHeight();
+                                                c.movementSpeed = payload.movementSpeed();
+                                                c.ambientSoundInterval = payload.ambientSoundInterval();
+                                                QuackConfig.get().validate();
+                                                QuackConfig.save();
+
+                                                // Sync back to all clients
+                                                for (ServerPlayer p : context.player().getServer().getPlayerList()
+                                                                .getPlayers()) {
+                                                        p.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
+                                                }
+
+                                                // Update all existing ducks on server
+                                                for (var level : context.player().getServer().getAllLevels()) {
+                                                        for (var duck : level.getEntities(QuackEntityTypes.DUCK,
+                                                                        e -> true)) {
+                                                                duck.updateFromConfig();
+                                                        }
+                                                }
+                                        });
+                                });
         }
 
         /**
@@ -255,6 +343,12 @@ public final class QuackModNeoForge {
                                                 DUCK_EGG_PROJECTILE.get(),
                                                 ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<mc.quackedducks.entities.projectile.DuckEggEntity>(
                                                                 ctx, 1.0f, false));
+
+                                // Hooks
+                                QuackMod.PACKET_SENDER = (payload) -> {
+                                        net.neoforged.neoforge.client.network.ClientPacketDistributor
+                                                        .sendToServer(payload);
+                                };
                         });
                 }
         }

@@ -13,4 +13,8 @@ neoForge {
 dependencies {
     // GeckoLib common
     implementation "software.bernie.geckolib:geckolib-common-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
+
+    // Mixin for common compilation
+    compileOnly "org.spongepowered:mixin:0.8.5"
+    compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 }

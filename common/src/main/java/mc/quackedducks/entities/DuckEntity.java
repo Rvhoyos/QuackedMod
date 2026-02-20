@@ -355,8 +355,17 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      * Prevents random teleporting when taming a migrating duck.
      */
     @Override
+    public int getAmbientSoundInterval() {
+        return mc.quackedducks.config.QuackConfig.get().genericDucks.ambientSoundInterval;
+    }
+
+    @Override
     public void tick() {
         super.tick();
+
+        if (!this.level().isClientSide && this.tickCount % 100 == 0) {
+            // Diagnostic: box size tracking removed
+        }
 
         // CLIENT: drive animation timers once
         if (this.level().isClientSide) {
@@ -477,8 +486,11 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      */
 
     @Override
-    public InteractionResult mobInteract(Player player, InteractionHand hand) {
-
+    public InteractionResult mobInteract(Player player, net.minecraft.world.InteractionHand hand) {
+        InteractionResult interactionResult = super.mobInteract(player, hand);
+        if (interactionResult.consumesAction()) {
+            return interactionResult;
+        }
         final ItemStack stack = player.getItemInHand(hand);
         final boolean client = level().isClientSide;
 
@@ -592,4 +604,35 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         this.goalSelector.addGoal(16, new RandomLookAroundGoal(this));
     }
 
+    public net.minecraft.world.entity.EntityDimensions getDuckDimensions(net.minecraft.world.entity.Pose pose) {
+        var config = mc.quackedducks.config.QuackConfig.get().genericDucks;
+        net.minecraft.world.entity.EntityDimensions dims = net.minecraft.world.entity.EntityDimensions
+                .scalable(config.duckWidth, config.duckHeight)
+                .withEyeHeight(config.duckEyeHeight);
+
+        var finalDims = this.isBaby() ? dims.scale(0.5F) : dims;
+
+        // Diagnostic log tracking removed
+
+        return finalDims;
+    }
+
+    @Override
+    public void refreshDimensions() {
+        super.refreshDimensions();
+    }
+
+    public void updateFromConfig() {
+        var config = mc.quackedducks.config.QuackConfig.get().genericDucks;
+
+        var speedAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speedAttr != null) {
+            speedAttr.setBaseValue(config.movementSpeed);
+        }
+        var healthAttr = this.getAttribute(Attributes.MAX_HEALTH);
+        if (healthAttr != null) {
+            healthAttr.setBaseValue(config.maxHealth);
+        }
+        this.refreshDimensions();
+    }
 }

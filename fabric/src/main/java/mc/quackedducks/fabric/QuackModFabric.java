@@ -4,7 +4,14 @@ import mc.quackedducks.QuackMod;
 import mc.quackedducks.entities.DuckEntity;
 import mc.quackedducks.entities.QuackEntityTypes;
 import mc.quackedducks.items.QuackyModItems;
+import mc.quackedducks.command.QuackCommands;
+import mc.quackedducks.config.QuackConfig;
+import mc.quackedducks.network.QuackNetwork;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.server.level.ServerPlayer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
@@ -25,6 +32,54 @@ public final class QuackModFabric implements ModInitializer {
     public void onInitialize() {
         // Common init (entity types, items, sounds)
         QuackMod.init();
+
+        // Commands
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            QuackCommands.register(dispatcher);
+        });
+
+        // Networking Payloads
+        PayloadTypeRegistry.playS2C().register(QuackNetwork.SYNC_CONFIG,
+                QuackNetwork.SyncConfigPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(QuackNetwork.OPEN_CONFIG_GUI,
+                QuackNetwork.OpenConfigGuiPayload.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(QuackNetwork.UPDATE_CONFIG,
+                QuackNetwork.UpdateConfigPayload.STREAM_CODEC);
+
+        // Sync on join
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayNetworking.send(handler.player, QuackNetwork.SyncConfigPayload.fromCurrent());
+        });
+
+        // GUI Opener Hook
+        QuackMod.CONFIG_OPENER = (player) -> {
+            ServerPlayNetworking.send(player, new QuackNetwork.OpenConfigGuiPayload());
+        };
+
+        // Update Handler
+        ServerPlayNetworking.registerGlobalReceiver(QuackNetwork.UPDATE_CONFIG, (payload, context) -> {
+            context.server().execute(() -> {
+                var c = QuackConfig.get().genericDucks;
+                c.duckWidth = payload.duckWidth();
+                c.duckHeight = payload.duckHeight();
+                c.movementSpeed = payload.movementSpeed();
+                c.ambientSoundInterval = payload.ambientSoundInterval();
+                QuackConfig.get().validate();
+                QuackConfig.save();
+
+                // Sync to all
+                for (ServerPlayer p : context.server().getPlayerList().getPlayers()) {
+                    ServerPlayNetworking.send(p, QuackNetwork.SyncConfigPayload.fromCurrent());
+                }
+
+                // Update all existing ducks on server
+                for (var level : context.server().getAllLevels()) {
+                    for (var duck : level.getEntities(QuackEntityTypes.DUCK, e -> true)) {
+                        duck.updateFromConfig();
+                    }
+                }
+            });
+        });
 
         // Entity attributes
         FabricDefaultAttributeRegistry.register(QuackEntityTypes.DUCK, DuckEntity.createAttributes());
