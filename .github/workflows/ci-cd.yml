@@ -56,8 +56,8 @@ jobs:
 
       - name: Deploy to Staging
         run: |
-          chmod +x ./scripts/deploy-staging.sh
-          ./scripts/deploy-staging.sh "build/libs"
+          chmod +x /home/ubuntu/mcserver/deploy-staging.sh
+          /home/ubuntu/mcserver/deploy-staging.sh "build/libs"
 
   deploy-prod:
     if: github.event_name == 'release'
