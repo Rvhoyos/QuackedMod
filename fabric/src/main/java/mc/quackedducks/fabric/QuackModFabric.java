@@ -29,30 +29,33 @@ public final class QuackModFabric implements ModInitializer {
         // Entity attributes
         FabricDefaultAttributeRegistry.register(QuackEntityTypes.DUCK, DuckEntity.createAttributes());
 
-        // Biome spawns
+        // Biome spawns - Load from config
+        var duckBiomes = new java.util.HashSet<>(mc.quackedducks.config.QuackConfig.getDuckBiomes());
+        var wetBiomes = new java.util.HashSet<>(mc.quackedducks.config.QuackConfig.getWetBiomes());
+        var config = mc.quackedducks.config.QuackConfig.get();
+
         BiomeModifications.addSpawn(
                 ctx -> {
                     var keyOpt = ctx.getBiomeKey();
-                    return QuackMod.DUCK_BIOMES.contains(keyOpt.location());
+                    return duckBiomes.contains(keyOpt.location());
                 },
                 MobCategory.CREATURE,
                 QuackEntityTypes.DUCK,
-                3, // weight (default for non-wet biomes)
-                1, // min group
-                1 // max group
-        );
+                config.spawning.baseWeight,
+                config.spawning.minGroupSize,
+                config.spawning.maxGroupSize);
 
         // Higher weight for wet biomes
         BiomeModifications.addSpawn(
                 ctx -> {
                     var keyOpt = ctx.getBiomeKey();
-                    return QuackMod.WET_BIOMES.contains(keyOpt.location());
+                    return wetBiomes.contains(keyOpt.location());
                 },
                 MobCategory.CREATURE,
                 QuackEntityTypes.DUCK,
-                3, // extra weight for wet biomes (total 6)
-                1,
-                1);
+                config.spawning.wetBiomeBonusWeight,
+                config.spawning.minGroupSize,
+                config.spawning.maxGroupSize);
 
         // Creative tab additions
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FOOD_AND_DRINKS).register(entries -> {

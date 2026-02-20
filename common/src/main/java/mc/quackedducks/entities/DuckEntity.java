@@ -538,8 +538,11 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      */
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createLivingAttributes()
-                .add(Attributes.MAX_HEALTH, 6.0D) // fragile like a chicken
-                .add(Attributes.MOVEMENT_SPEED, 0.25D) // slow-ish walker
+                .add(Attributes.MAX_HEALTH, mc.quackedducks.config.QuackConfig.get().genericDucks.maxHealth) // fragile
+                                                                                                             // like a
+                                                                                                             // chicken
+                .add(Attributes.MOVEMENT_SPEED, mc.quackedducks.config.QuackConfig.get().genericDucks.movementSpeed) // slow-ish
+                                                                                                                     // walker
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0D) // good swimmer
                 .add(Attributes.FLYING_SPEED, 0.9D)
                 .add(Attributes.TEMPT_RANGE, 16.0D) // how far it notices food/player

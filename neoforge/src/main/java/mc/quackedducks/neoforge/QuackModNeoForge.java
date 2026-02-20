@@ -37,6 +37,8 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.common.world.BiomeModifier;
+import com.mojang.serialization.MapCodec;
 
 /**
  * NeoForge entrypoint.
@@ -56,6 +58,10 @@ public final class QuackModNeoForge {
         private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, QuackMod.MOD_ID);
         private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT,
                         QuackMod.MOD_ID);
+        // NeoForge specialized registries
+        private static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS = DeferredRegister
+                        .create(net.neoforged.neoforge.registries.NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS,
+                                        QuackMod.MOD_ID);
 
         // --- Entity Types ---
         public static final DeferredHolder<EntityType<?>, EntityType<DuckEggEntity>> DUCK_EGG_PROJECTILE = ENTITIES
@@ -100,6 +106,11 @@ public final class QuackModNeoForge {
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
 
+        // --- Serializers ---
+        public static final DeferredHolder<MapCodec<? extends BiomeModifier>, MapCodec<ConfigBiomeModifier>> CONFIG_SPAWNS_SERIALIZER = BIOME_MODIFIER_SERIALIZERS
+                        .register("config_spawns", () -> ConfigBiomeModifier.CODEC);
+
+        // --- Items ---
         // --- Items ---
         public static final DeferredHolder<Item, Item> DUCK_EGG_ITEM = ITEMS.register("duck_egg", () -> new DuckEggItem(
                         QuackyModItems.baseProperties("duck_egg").stacksTo(64)));
@@ -179,6 +190,7 @@ public final class QuackModNeoForge {
                 ENTITIES.register(modBus);
                 ITEMS.register(modBus);
                 SOUNDS.register(modBus);
+                BIOME_MODIFIER_SERIALIZERS.register(modBus);
 
                 // Log init (don't call QuackMod.init() — that uses vanilla Registry.register)
                 QuackMod.LOGGER.info("QuackMod initialized!");
