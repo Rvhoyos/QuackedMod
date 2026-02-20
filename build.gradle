@@ -1,97 +1,71 @@
-plugins {
-    id 'dev.architectury.loom' version '1.11-SNAPSHOT' apply false
-    id 'architectury-plugin' version '3.4-SNAPSHOT'
-    id 'com.gradleup.shadow' version '8.3.6' apply false
-}
-
-architectury {
-    minecraft = project.minecraft_version
-}
+// Root build.gradle — shared config for all subprojects
 
 allprojects {
     group = rootProject.maven_group
     version = rootProject.mod_version
-    
-     repositories {
-     maven {
-         name = 'ParchmentMC'
-         url = 'https://maven.parchmentmc.org'
-     }
-     exclusiveContent {
-        forRepository {
-            maven {
-                name = 'GeckoLib'
-                url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+
+    repositories {
+        maven {
+            name = 'ParchmentMC'
+            url = 'https://maven.parchmentmc.org'
+        }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'GeckoLib'
+                    url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+                }
+            }
+            filter {
+                includeGroup('software.bernie.geckolib')
             }
         }
-        filter { 
-            includeGroup('software.bernie.geckolib')
-        }
     }
- }
 }
 
 subprojects {
-    apply plugin: 'dev.architectury.loom'
-    apply plugin: 'architectury-plugin'
     apply plugin: 'maven-publish'
 
-    base {
-        // Set up a suffixed format for the mod jar names, e.g. `example-fabric`.
-        archivesName = "$rootProject.archives_name-$project.name"
-    }
-
-    repositories {
-        // Add repositories to retrieve artifacts from in here.
-        // You should only use this when depending on other mods because
-        // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-        // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-        // for more information about repositories.
-    }
-
-    loom {
-        silentMojangMappingsLicense()
-    }
-
-    dependencies {
-        minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
-        mappings loom.layered() {
-         officialMojangMappings()
-         parchment("org.parchmentmc.data:parchment-1.21.8:2025.07.20@zip")
-     }
-     
-    }
-
-    java {
-        // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-        // if it is present.
-        // If you remove this line, sources will not be generated.
-        withSourcesJar()
-
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+    afterEvaluate {
+        base {
+            archivesName = "$rootProject.archives_name-$project.name"
         }
-    }
 
-    tasks.withType(JavaCompile).configureEach {
-        it.options.release = 21
-    }
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+            withSourcesJar()
+        }
 
-    // Configure Maven publishing.
-    publishing {
-        publications {
-            mavenJava(MavenPublication) {
-                artifactId = base.archivesName.get()
-                from components.java
+        tasks.withType(JavaCompile).configureEach {
+            it.options.release = 21
+        }
+
+        // Include common sources in platform projects
+        if (project.name != 'common') {
+            tasks.named('compileJava').configure {
+                source project(':common').sourceSets.main.allSource
+            }
+
+            tasks.named('sourcesJar').configure {
+                from project(':common').sourceSets.main.allSource
+            }
+
+            tasks.withType(ProcessResources).configureEach {
+                from project(':common').sourceSets.main.resources
             }
         }
 
-        // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-        repositories {
-            // Add repositories to publish to here.
-            // Notice: This block does NOT have the same function as the block in the top level.
-            // The repositories here will be used for publishing your artifact, not for
-            // retrieving dependencies.
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    artifactId = base.archivesName.get()
+                    from components.java
+                }
+            }
+            repositories {
+            }
         }
     }
 }

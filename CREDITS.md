@@ -5,7 +5,8 @@
 
 **Libraries**  
 - GeckoLib — MIT — https://github.com/bernie-g/geckolib  
-- Architectury API — LGPL-3.0 — https://github.com/architectury/architectury-api  
+- Fabric Loom — https://github.com/FabricMC/fabric-loom  
+- ModDevGradle (NeoForge) — https://github.com/neoforged/ModDevGradle
 
 **Tools**  
 - Blockbench (models/animations) — https://www.blockbench.net  
