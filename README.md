@@ -22,7 +22,9 @@ A "lightweight" cross-loader Minecraft mod that adds ducks with simple AI, natur
 - **Quack**, hurt, and death sounds.
 - Duck **Eggs**, Ducks lay eggs periodically.
 - **Taming & Sitting the lead duck**: With food they eat!
-- **Customizable** JSON config, allows users / servers to include more biomes from the game or other mods. ( **Currently broken** )
+- **Customizable** JSON config for biomes, health, speed, and more.
+- **Dynamic Hitbox Scaling**: Entity hitboxes now scale perfectly with the model size configured in the JSON/GUI.
+- **In-game Configuration**: Easy-to-use GUI (via `/quack config`) for tweaking duck parameters on the fly.
 ### Drops & Items
 - **Duck Meat** and Cooked Duck foods.
 - **Duck Feathers** for crafting.

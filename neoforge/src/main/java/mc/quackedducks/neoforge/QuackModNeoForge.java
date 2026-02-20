@@ -26,7 +26,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
-import mc.quackedducks.command.QuackCommands;
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.network.QuackNetwork;
 import net.minecraft.server.level.ServerPlayer;
