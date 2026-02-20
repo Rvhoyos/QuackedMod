@@ -5,6 +5,7 @@
 
 # --- Dev runtime & logs (Minecraft) ---
 **/run/
+**/runs/
 **/logs/
 **/crash-reports/
 **/.architectury-transformer/
@@ -16,7 +17,10 @@
 !.vscode/tasks.json
 
 # --- OS cruft (harmless to ignore anywhere) ---
-.DS_Store           # macOS Finder metadata
-Thumbs.db           # Windows Explorer metadata
+# macOS Finder metadata
+.DS_Store
+# Windows Explorer metadata
+Thumbs.db
 
 **/bin/
+.envrc

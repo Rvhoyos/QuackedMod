@@ -8,7 +8,7 @@
     "rvhoyos"
   ],
   "contact": {
-    "homepage": "https://github.com/rvhoyos", 
+    "homepage": "https://github.com/rvhoyos",
     "issues": "https://github.com/rvhoyos/QuackMod/issues",
     "sources": "https://github.com/rvhoyos/QuackMod"
   },
@@ -30,7 +30,6 @@
     "fabricloader": ">=0.17.2",
     "minecraft": "~1.21.8",
     "java": ">=21",
-    "architectury": ">=17.0.8",
     "fabric-api": "*"
   },
   "suggests": {
