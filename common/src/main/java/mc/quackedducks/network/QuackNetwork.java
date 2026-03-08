@@ -6,15 +6,15 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class QuackNetwork {
     public static final CustomPacketPayload.Type<SyncConfigPayload> SYNC_CONFIG = new CustomPacketPayload.Type<>(
-            ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, "sync_config"));
+            Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, "sync_config"));
     public static final CustomPacketPayload.Type<OpenConfigGuiPayload> OPEN_CONFIG_GUI = new CustomPacketPayload.Type<>(
-            ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, "open_config_gui"));
+            Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, "open_config_gui"));
     public static final CustomPacketPayload.Type<UpdateConfigPayload> UPDATE_CONFIG = new CustomPacketPayload.Type<>(
-            ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, "update_config"));
+            Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, "update_config"));
 
     public record SyncConfigPayload(float duckWidth, float duckHeight, double movementSpeed, int ambientSoundInterval)
             implements CustomPacketPayload {

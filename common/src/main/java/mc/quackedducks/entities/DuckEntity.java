@@ -6,8 +6,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Bee;
-import net.minecraft.world.entity.animal.PolarBear;
+import net.minecraft.world.entity.animal.bee.Bee;
+import net.minecraft.world.entity.animal.polarbear.PolarBear;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
@@ -29,16 +29,14 @@ import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
-import software.bernie.geckolib.util.GeckoLibUtil;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animatable.manager.AnimatableManager.ControllerRegistrar;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
-import software.bernie.geckolib.animation.Animation.LoopType;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
@@ -57,14 +55,14 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     @Nullable
     private DuckEntity followedBy; // who is following me
     // --- GeckoLib animation cache & clips ---
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private final AnimatableInstanceCache cache = software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
     // looping
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.duck.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.duck.walk");
     // One-shots that return to idle:
     // One-shots (non-looping)
-    private static final RawAnimation PECK = RawAnimation.begin().then("animation.duck.peck", LoopType.PLAY_ONCE);
-    private static final RawAnimation SHAKE = RawAnimation.begin().then("animation.duck.shake", LoopType.PLAY_ONCE);
+    private static final RawAnimation PECK = RawAnimation.begin().thenPlay("animation.duck.peck");
+    private static final RawAnimation SHAKE = RawAnimation.begin().thenPlay("animation.duck.shake");
 
     // --- Owner-follow goal (taming) ---
     private FollowOwnerGoal followOwnerGoal;
@@ -182,8 +180,9 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      * one shot animation lengths must be tracked manually by tick length.
      */
     @Override
-    public void registerControllers(ControllerRegistrar controllers) {
-        controllers.add(new software.bernie.geckolib.animatable.processing.AnimationController<>(
+    public void registerControllers(
+            software.bernie.geckolib.animatable.manager.AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(
                 "main",
                 2, // small blend for smoother returns
                 state -> {
@@ -228,7 +227,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                     // 2) Idle with slower, rarer ambient variants (cooldown now tick-based)
                     if (idleVariantCooldown <= 0) {
                         if (this.random.nextInt(5) == 0) { // 20% chance when eligible
-                            state.controller().forceAnimationReset(); // restart if already playing
+                            state.controller().reset(); // restart if already playing
                             if (this.random.nextBoolean()) {
                                 currentOneShot = PECK;
                                 oneShotLockTicks = 65; // match json + buffer for full animations
@@ -363,12 +362,10 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide && this.tickCount % 100 == 0) {
-            // Diagnostic: box size tracking removed
-        }
+        // Diagnostic: box size tracking removed
 
         // CLIENT: drive animation timers once
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             if (idleVariantCooldown > 0)
                 idleVariantCooldown--;
             if (oneShotLockTicks > 0)
@@ -376,7 +373,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         }
 
         // SERVER: game logic, goals, and state
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             if (!this.isBaby() && this.isLeader()) {
                 headStableTicks = Math.min(headStableTicks + 1, HEAD_STABLE_REQUIRED + 200);
             } else {
@@ -438,10 +435,6 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
 
         if (next != animState) {
             animState = next;
-            if (DEBUG_DUCKS && lastLoggedState != animState) {
-                dbg("anim state -> %s", animState);
-                lastLoggedState = animState;
-            }
         }
     }
 
@@ -492,7 +485,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
             return interactionResult;
         }
         final ItemStack stack = player.getItemInHand(hand);
-        final boolean client = level().isClientSide;
+        final boolean client = level().isClientSide();
 
         // Pause/resume owner-follow: sneak + empty hand by owner (leader only)
         if (this.isTame() && this.isOwnedBy(player)

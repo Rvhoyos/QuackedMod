@@ -18,7 +18,7 @@ public class ConfigBiomeModifier implements BiomeModifier {
     public void modify(Holder<Biome> biome, Phase phase, ModifiableBiomeInfo.BiomeInfo.Builder builder) {
         if (phase == Phase.ADD) {
             var config = QuackConfig.get();
-            var id = biome.unwrapKey().get().location();
+            var id = biome.unwrapKey().get().identifier();
 
             // Generic biomes
             if (QuackConfig.getDuckBiomes().contains(id)) {

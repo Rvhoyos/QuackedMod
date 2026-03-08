@@ -91,8 +91,8 @@ public final class QuackModFabric implements ModInitializer {
 
         BiomeModifications.addSpawn(
                 ctx -> {
-                    var keyOpt = ctx.getBiomeKey();
-                    return duckBiomes.contains(keyOpt.location());
+                    var key = ctx.getBiomeKey();
+                    return duckBiomes.contains(key.identifier());
                 },
                 MobCategory.CREATURE,
                 QuackEntityTypes.DUCK,
@@ -104,7 +104,7 @@ public final class QuackModFabric implements ModInitializer {
         BiomeModifications.addSpawn(
                 ctx -> {
                     var keyOpt = ctx.getBiomeKey();
-                    return wetBiomes.contains(keyOpt.location());
+                    return wetBiomes.contains(keyOpt.identifier());
                 },
                 MobCategory.CREATURE,
                 QuackEntityTypes.DUCK,

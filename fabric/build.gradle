@@ -1,6 +1,6 @@
 // Fabric module
 plugins {
-    id 'fabric-loom' version '1.10-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom-remap' version '1.15.4'
 }
 
 dependencies {

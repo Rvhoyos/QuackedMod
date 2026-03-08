@@ -3,7 +3,7 @@ package mc.quackedducks.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import mc.quackedducks.QuackMod;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.io.File;
 import java.io.FileReader;
@@ -116,11 +116,11 @@ public class QuackConfig {
     }
 
     // Helper to get ResourceLocations from strings
-    public static List<ResourceLocation> getDuckBiomes() {
-        List<ResourceLocation> list = new ArrayList<>();
+    public static List<Identifier> getDuckBiomes() {
+        List<Identifier> list = new ArrayList<>();
         for (String s : get().spawning.duckBiomes) {
             try {
-                list.add(ResourceLocation.parse(s));
+                list.add(Identifier.parse(s));
             } catch (Exception e) {
                 QuackMod.LOGGER.error("Invalid biome in config: " + s);
             }
@@ -128,11 +128,11 @@ public class QuackConfig {
         return list;
     }
 
-    public static List<ResourceLocation> getWetBiomes() {
-        List<ResourceLocation> list = new ArrayList<>();
+    public static List<Identifier> getWetBiomes() {
+        List<Identifier> list = new ArrayList<>();
         for (String s : get().spawning.wetBiomes) {
             try {
-                list.add(ResourceLocation.parse(s));
+                list.add(Identifier.parse(s));
             } catch (Exception e) {
                 QuackMod.LOGGER.error("Invalid wet biome in config: " + s);
             }

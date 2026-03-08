@@ -6,7 +6,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.renderer.base.GeoRenderState;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
+import software.bernie.geckolib.renderer.base.RenderPassInfo;
 
 /**
  * GeckoLib renderer for {@link DuckEntity}.
@@ -36,13 +36,11 @@ public class DuckRenderer<R extends LivingEntityRenderState & GeoRenderState> ex
      */
     @Override
     public void scaleModelForRender(
-            final R renderState,
+            final RenderPassInfo<R> renderPassInfo,
             final float widthScale,
-            final float heightScale,
-            final com.mojang.blaze3d.vertex.PoseStack poseStack,
-            final BakedGeoModel model,
-            final boolean isReRender) {
+            final float heightScale) {
         var config = mc.quackedducks.config.QuackConfig.get().genericDucks;
+        var renderState = renderPassInfo.renderState();
 
         // Ratio logic: Baseline adult model is now 1.0x of the 0.75x0.95 hitbox.
         // This makes the model larger relative to the hitbox to reduce "empty space".
@@ -57,12 +55,9 @@ public class DuckRenderer<R extends LivingEntityRenderState & GeoRenderState> ex
         }
 
         super.scaleModelForRender(
-                renderState,
+                renderPassInfo,
                 widthScale * scaleX,
-                heightScale * scaleY,
-                poseStack,
-                model,
-                isReRender);
+                heightScale * scaleY);
     }
 
 }

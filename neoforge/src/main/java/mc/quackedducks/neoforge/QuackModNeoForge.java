@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -26,6 +26,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
+import net.minecraft.world.item.component.TypedEntityData;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.component.CustomData;
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.network.QuackNetwork;
 import net.minecraft.server.level.ServerPlayer;
@@ -77,7 +80,7 @@ public final class QuackModNeoForge {
                                                         .clientTrackingRange(64)
                                                         .updateInterval(10)
                                                         .build(ResourceKey.create(Registries.ENTITY_TYPE,
-                                                                        ResourceLocation.fromNamespaceAndPath(
+                                                                        Identifier.fromNamespaceAndPath(
                                                                                         QuackMod.MOD_ID,
                                                                                         "duck_egg_projectile"))));
 
@@ -88,26 +91,26 @@ public final class QuackModNeoForge {
                                         .passengerAttachments(1.36875f)
                                         .clientTrackingRange(10)
                                         .build(ResourceKey.create(Registries.ENTITY_TYPE,
-                                                        ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID,
+                                                        Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                                         "duck"))));
 
         // --- Sounds ---
         public static final DeferredHolder<SoundEvent, SoundEvent> DUCK_AMBIENT_SOUND = SOUNDS
                         .register("entity.duck.ambient", () -> {
-                                ResourceLocation id = ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID,
+                                Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                 "entity.duck.ambient");
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
         public static final DeferredHolder<SoundEvent, SoundEvent> DUCK_HURT_SOUND = SOUNDS.register("entity.duck.hurt",
                         () -> {
-                                ResourceLocation id = ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID,
+                                Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                 "entity.duck.hurt");
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
         public static final DeferredHolder<SoundEvent, SoundEvent> DUCK_DEATH_SOUND = SOUNDS.register(
                         "entity.duck.death",
                         () -> {
-                                ResourceLocation id = ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID,
+                                Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                 "entity.duck.death");
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
@@ -123,8 +126,10 @@ public final class QuackModNeoForge {
 
         public static final DeferredHolder<Item, Item> DUCK_SPAWN_EGG_ITEM = ITEMS.register("duck_spawn_egg",
                         () -> new SpawnEggItem(
-                                        DUCK.get(),
-                                        QuackyModItems.baseProperties("duck_spawn_egg")));
+                                        QuackyModItems.baseProperties("duck_spawn_egg")
+                                                        .component(DataComponents.ENTITY_DATA,
+                                                                        TypedEntityData.of((EntityType<?>) DUCK.get(),
+                                                                                        new CompoundTag()))));
 
         public static final DeferredHolder<Item, Item> EMPTY_FOIE_GRAS_BOWL_ITEM = ITEMS.register(
                         "empty_foie_gras_bowl",
@@ -270,16 +275,22 @@ public final class QuackModNeoForge {
                                                 QuackConfig.save();
 
                                                 // Sync back to all clients
-                                                for (ServerPlayer p : context.player().getServer().getPlayerList()
-                                                                .getPlayers()) {
-                                                        p.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
+                                                if (context.player() instanceof ServerPlayer serverPlayer) {
+                                                        for (ServerPlayer p : serverPlayer.level().getServer()
+                                                                        .getPlayerList()
+                                                                        .getPlayers()) {
+                                                                p.connection.send(QuackNetwork.SyncConfigPayload
+                                                                                .fromCurrent());
+                                                        }
                                                 }
-
                                                 // Update all existing ducks on server
-                                                for (var level : context.player().getServer().getAllLevels()) {
-                                                        for (var duck : level.getEntities(QuackEntityTypes.DUCK,
-                                                                        e -> true)) {
-                                                                duck.updateFromConfig();
+                                                if (context.player() instanceof ServerPlayer serverPlayer) {
+                                                        var server = serverPlayer.level().getServer();
+                                                        for (var level : server.getAllLevels()) {
+                                                                for (var duck : level.getEntities(QuackEntityTypes.DUCK,
+                                                                                e -> true)) {
+                                                                        duck.updateFromConfig();
+                                                                }
                                                         }
                                                 }
                                         });

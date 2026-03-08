@@ -3,7 +3,7 @@ package mc.quackedducks.sound;
 import mc.quackedducks.QuackMod;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 
 /**
@@ -36,7 +36,7 @@ public final class QuackedSounds {
     }
 
     private static SoundEvent register(String path) {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, path);
+        Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, path);
         SoundEvent event = SoundEvent.createVariableRangeEvent(id);
         return Registry.register(BuiltInRegistries.SOUND_EVENT, id, event);
     }
