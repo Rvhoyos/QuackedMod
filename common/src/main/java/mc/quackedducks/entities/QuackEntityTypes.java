@@ -46,7 +46,7 @@ public class QuackEntityTypes {
                                 EntityType.Builder.of(DuckEntity::new, MobCategory.CREATURE)
                                                 .sized(QuackConfig.get().genericDucks.duckWidth,
                                                                 QuackConfig.get().genericDucks.duckHeight)
-                                                .eyeHeight(QuackConfig.get().genericDucks.duckEyeHeight)
+                                                .eyeHeight(QuackConfig.get().genericDucks.duckHeight)
                                                 .passengerAttachments(1.36875f)
                                                 .clientTrackingRange(10)
                                                 .build(ResourceKey.create(Registries.ENTITY_TYPE,

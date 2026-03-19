@@ -10,6 +10,15 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
+/**
+ * In-game configuration screen opened via {@code /quack config}.
+ *
+ * <p>Renders sliders for duck width, height, movement speed, and ambient sound
+ * frequency. On "Done", validates the config locally and fires an
+ * {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} to the server.
+ * Changes take effect on all clients after the server re-broadcasts a
+ * {@link mc.quackedducks.network.QuackNetwork.SyncConfigPayload}.
+ */
 public class QuackConfigScreen extends Screen {
     public QuackConfigScreen() {
         super(Component.literal("QuackedMod Configuration"));
@@ -48,6 +57,20 @@ public class QuackConfigScreen extends Screen {
                 Component.literal("Quack Sound Freq (Ticks): "), (float) config.ambientSoundInterval, 20.0f, 1200.0f,
                 (val) -> config.ambientSoundInterval = val.intValue()));
 
+        startY += spacing;
+
+        // Migration Cooldown Slider (20 - 12000 ticks; 20=~1s for testing, 12000=10min)
+        this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
+                Component.literal("Migration Cooldown (Ticks): "), (float) config.migrationCooldownTicks, 20.0f, 12000.0f,
+                (val) -> config.migrationCooldownTicks = val.intValue()));
+
+        startY += spacing;
+
+        // Dab Chance Slider (1 - 20; 1=always, 5=20% default, 20=5% rare)
+        this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
+                Component.literal("Dab Chance (1=always, 20=rare): "), (float) config.dabChance, 1.0f, 20.0f,
+                (val) -> config.dabChance = val.intValue()));
+
         // --- Footer Buttons ---
 
         this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), (button) -> {
@@ -58,7 +81,8 @@ public class QuackConfigScreen extends Screen {
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, (button) -> {
             QuackConfig.get().validate();
             mc.quackedducks.QuackMod.sendConfigUpdate(new QuackNetwork.UpdateConfigPayload(
-                    config.duckWidth, config.duckHeight, config.movementSpeed, config.ambientSoundInterval));
+                    config.duckWidth, config.duckHeight, config.movementSpeed,
+                    config.ambientSoundInterval, config.migrationCooldownTicks, config.dabChance));
             this.onClose();
         }).bounds(centerX - 100, this.height - 30, 200, 20).build());
     }
@@ -77,6 +101,7 @@ public class QuackConfigScreen extends Screen {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
+    /** Returns {@code false} so the game keeps running while the GUI is open. */
     @Override
     public boolean isPauseScreen() {
         return false;

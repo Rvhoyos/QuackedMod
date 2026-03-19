@@ -10,6 +10,18 @@ import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.common.world.ModifiableBiomeInfo;
 
+/**
+ * NeoForge {@link BiomeModifier} that injects duck spawn entries from config.
+ *
+ * <p>During the {@link Phase#ADD} phase, ducks are added to every biome listed
+ * in {@link mc.quackedducks.config.QuackConfig.Spawning#duckBiomes} at
+ * {@code baseWeight}. Biomes that also appear in {@code wetBiomes} receive a
+ * second entry at {@code wetBiomeBonusWeight}, effectively raising their total
+ * spawn weight.
+ *
+ * <p>The codec is registered as a deferred biome-modifier serializer in
+ * {@link QuackModNeoForge}.
+ */
 public class ConfigBiomeModifier implements BiomeModifier {
 
     public static final MapCodec<ConfigBiomeModifier> CODEC = MapCodec.unit(ConfigBiomeModifier::new);

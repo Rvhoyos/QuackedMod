@@ -139,7 +139,7 @@ public final class QuackModNeoForge {
         public static final DeferredHolder<Item, Item> DUCK_MEAT_ITEM = ITEMS.register("duck_meat", () -> new Item(
                         QuackyModItems.baseProperties("duck_meat")
                                         .food(new FoodProperties.Builder()
-                                                        .nutrition(3)
+                                                        .nutrition(2)
                                                         .saturationModifier(0.3f)
                                                         .build())
                                         .component(DataComponents.CONSUMABLE,
@@ -244,6 +244,8 @@ public final class QuackModNeoForge {
                                         c.duckHeight = payload.duckHeight();
                                         c.movementSpeed = payload.movementSpeed();
                                         c.ambientSoundInterval = payload.ambientSoundInterval();
+                                        c.migrationCooldownTicks = payload.migrationCooldownTicks();
+                                        c.dabChance = payload.dabChance();
                                         QuackConfig.get().validate();
                                 });
 
@@ -271,21 +273,17 @@ public final class QuackModNeoForge {
                                                 c.duckHeight = payload.duckHeight();
                                                 c.movementSpeed = payload.movementSpeed();
                                                 c.ambientSoundInterval = payload.ambientSoundInterval();
+                                                c.migrationCooldownTicks = payload.migrationCooldownTicks();
+                                                c.dabChance = payload.dabChance();
                                                 QuackConfig.get().validate();
                                                 QuackConfig.save();
 
-                                                // Sync back to all clients
                                                 if (context.player() instanceof ServerPlayer serverPlayer) {
-                                                        for (ServerPlayer p : serverPlayer.level().getServer()
-                                                                        .getPlayerList()
-                                                                        .getPlayers()) {
+                                                        var server = serverPlayer.level().getServer();
+                                                        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                                                                 p.connection.send(QuackNetwork.SyncConfigPayload
                                                                                 .fromCurrent());
                                                         }
-                                                }
-                                                // Update all existing ducks on server
-                                                if (context.player() instanceof ServerPlayer serverPlayer) {
-                                                        var server = serverPlayer.level().getServer();
                                                         for (var level : server.getAllLevels()) {
                                                                 for (var duck : level.getEntities(QuackEntityTypes.DUCK,
                                                                                 e -> true)) {

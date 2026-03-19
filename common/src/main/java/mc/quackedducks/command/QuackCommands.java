@@ -9,7 +9,13 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
 
+/** Registers the {@code /quack} command tree (requires gamemaster permission). */
 public class QuackCommands {
+    /**
+     * Registers {@code /quack reload} and {@code /quack config} onto the given dispatcher.
+     *
+     * @param dispatcher the server command dispatcher
+     */
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("quack")
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))

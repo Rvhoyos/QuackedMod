@@ -12,6 +12,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * JSON-backed singleton configuration for QuackedMod.
+ *
+ * <p>Loaded from {@code config/quack.json} on startup. If the file is missing
+ * or the version doesn't match {@code CURRENT_VERSION}, defaults are written.
+ * Call {@link #get()} anywhere to access the live instance; call {@link #load()}
+ * to reload from disk (e.g. via {@code /quack reload}).
+ *
+ * <p>Two sub-objects are exposed:
+ * <ul>
+ *   <li>{@link GenericDucks} — per-duck physical and audio parameters</li>
+ *   <li>{@link Spawning} — world-spawn weights, group sizes, and biome lists</li>
+ * </ul>
+ */
 public class QuackConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final int CURRENT_VERSION = 1;
@@ -25,24 +39,44 @@ public class QuackConfig {
     public GenericDucks genericDucks = new GenericDucks();
     public Spawning spawning = new Spawning();
 
+    /**
+     * Physical and audio parameters applied to every duck entity.
+     * All values are validated and clamped by {@link QuackConfig#validate()}.
+     */
     public static class GenericDucks {
         public double maxHealth = 6.0;
         public double movementSpeed = 0.25;
         public float duckWidth = 0.75f;
         public float duckHeight = 0.95f;
-        public float duckEyeHeight = 0.95f;
         public float babyScale = 0.5f;
         public int ambientSoundInterval = 120;
+        /** Ticks between migration attempts (3600 = 3 min at 20 TPS). Min 20 for testing. */
+        public int migrationCooldownTicks = 3600;
+        /**
+         * 1-in-N chance to dab when the idle variant window opens (~every 9–11 s).
+         * 1 = always dab, 5 = 20% (default), 20 = 5% (rare).
+         */
+        public int dabChance = 5;
     }
 
+    /**
+     * Clamps all {@link GenericDucks} values to safe ranges.
+     * Called automatically after loading and after client-side config updates.
+     */
     public void validate() {
         genericDucks.maxHealth = Math.clamp(genericDucks.maxHealth, 0.1, 1000.0);
         genericDucks.movementSpeed = Math.clamp(genericDucks.movementSpeed, 0.05, 1.0);
         genericDucks.duckWidth = Math.clamp(genericDucks.duckWidth, 0.1f, 5.0f);
         genericDucks.duckHeight = Math.clamp(genericDucks.duckHeight, 0.1f, 5.0f);
         genericDucks.ambientSoundInterval = Math.max(20, genericDucks.ambientSoundInterval);
+        genericDucks.migrationCooldownTicks = Math.clamp(genericDucks.migrationCooldownTicks, 20, 12000);
+        genericDucks.dabChance = Math.clamp(genericDucks.dabChance, 1, 100);
     }
 
+    /**
+     * World-spawn configuration for duck entities.
+     * Wet biomes receive {@code baseWeight + wetBiomeBonusWeight} total spawn weight.
+     */
     public static class Spawning {
         public int baseWeight = 3;
         public int wetBiomeBonusWeight = 3;
@@ -67,6 +101,10 @@ public class QuackConfig {
 
     // --- Loading / Saving ---
 
+    /**
+     * Loads config from disk, creating defaults if missing or version-mismatched.
+     * Always calls {@link #validate()} before returning.
+     */
     public static void load() {
         File configFile = new File("config", CONFIG_FILE_NAME); // Helper assumes 'config' dir usually exists or is
                                                                 // relative to run dir
@@ -94,6 +132,7 @@ public class QuackConfig {
         instance.validate();
     }
 
+    /** Writes the current instance to {@code config/quack.json}. */
     public static void save() {
         File configDir = new File("config");
         if (!configDir.exists()) {
@@ -108,6 +147,11 @@ public class QuackConfig {
         }
     }
 
+    /**
+     * Returns the singleton config instance, loading from disk on first call.
+     *
+     * @return the current {@link QuackConfig} instance
+     */
     public static QuackConfig get() {
         if (instance == null) {
             load();
@@ -115,7 +159,10 @@ public class QuackConfig {
         return instance;
     }
 
-    // Helper to get ResourceLocations from strings
+    /**
+     * Returns the list of biome {@link Identifier}s where ducks spawn normally.
+     * Invalid entries are skipped with a logged error.
+     */
     public static List<Identifier> getDuckBiomes() {
         List<Identifier> list = new ArrayList<>();
         for (String s : get().spawning.duckBiomes) {
@@ -128,6 +175,10 @@ public class QuackConfig {
         return list;
     }
 
+    /**
+     * Returns the list of wet biome {@link Identifier}s that receive bonus spawn weight.
+     * Invalid entries are skipped with a logged error.
+     */
     public static List<Identifier> getWetBiomes() {
         List<Identifier> list = new ArrayList<>();
         for (String s : get().spawning.wetBiomes) {

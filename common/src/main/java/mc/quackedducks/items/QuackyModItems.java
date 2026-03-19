@@ -34,11 +34,16 @@ public class QuackyModItems {
         public static Item DUCK_FEATHER_ARROW;
         public static Item COOKED_DUCK;
         public static Item FOIE_GRAS;
-        public static Item FOIE_GRAS_BOWL;
         public static Item EMPTY_FOIE_GRAS_BOWL;
         public static Item DUCK_EGG;
         public static Item DUCK_SPAWN_EGG;
 
+        /**
+         * Registers all mod items into the vanilla item registry.
+         * Called from {@link mc.quackedducks.QuackMod#init()} on Fabric;
+         * on NeoForge items are registered via DeferredRegisters in
+         * {@link mc.quackedducks.neoforge.QuackModNeoForge} instead.
+         */
         public static void init() {
                 DUCK_MEAT = registerItem("duck_meat", new Item(
                                 baseProperties("duck_meat")
@@ -56,21 +61,6 @@ public class QuackyModItems {
 
                 EMPTY_FOIE_GRAS_BOWL = registerItem("empty_foie_gras_bowl", new Item(
                                 baseProperties("empty_foie_gras_bowl")));
-
-                FOIE_GRAS_BOWL = registerItem("foie_gras_bowl", new Item(
-                                baseProperties("foie_gras_bowl")
-                                                .food(new FoodProperties.Builder()
-                                                                .nutrition(8)
-                                                                .saturationModifier(0.8f)
-                                                                .build())
-                                                .component(DataComponents.CONSUMABLE,
-                                                                Consumable.builder()
-                                                                                .onConsume(new ApplyStatusEffectsConsumeEffect(
-                                                                                                new MobEffectInstance(
-                                                                                                                MobEffects.REGENERATION,
-                                                                                                                100,
-                                                                                                                1)))
-                                                                                .build())));
 
                 DUCK_FEATHER = registerItem("duck_feather", new Item(
                                 baseProperties("duck_feather")));
@@ -122,6 +112,7 @@ public class QuackyModItems {
                 return () -> DUCK_EGG;
         }
 
+        /** Registers {@code item} under the mod namespace with the given {@code name}. */
         private static Item registerItem(String name, Item item) {
                 return Registry.register(
                                 BuiltInRegistries.ITEM,
@@ -129,6 +120,10 @@ public class QuackyModItems {
                                 item);
         }
 
+        /**
+         * Creates a base {@link Item.Properties} with the mod-namespaced resource key
+         * for the given item name. Used by both Fabric and NeoForge registrations.
+         */
         public static Item.Properties baseProperties(String name) {
                 return new Item.Properties().setId(
                                 ResourceKey.create(Registries.ITEM,

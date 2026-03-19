@@ -28,6 +28,10 @@ import net.minecraft.world.item.CreativeModeTabs;
  * - Creative tab item additions (Fabric API)
  */
 public final class QuackModFabric implements ModInitializer {
+    /**
+     * Common Fabric initialisation: runs shared {@link mc.quackedducks.QuackMod#init()},
+     * registers commands, networking payloads, biome spawns, and creative tab entries.
+     */
     @Override
     public void onInitialize() {
         // Common init (entity types, items, sounds)
@@ -64,6 +68,8 @@ public final class QuackModFabric implements ModInitializer {
                 c.duckHeight = payload.duckHeight();
                 c.movementSpeed = payload.movementSpeed();
                 c.ambientSoundInterval = payload.ambientSoundInterval();
+                c.migrationCooldownTicks = payload.migrationCooldownTicks();
+                c.dabChance = payload.dabChance();
                 QuackConfig.get().validate();
                 QuackConfig.save();
 

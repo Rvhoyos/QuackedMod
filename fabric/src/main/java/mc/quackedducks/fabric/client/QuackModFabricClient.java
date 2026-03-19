@@ -16,6 +16,11 @@ import mc.quackedducks.QuackMod;
  * Registers client-only renderers (entity and projectile).
  */
 public final class QuackModFabricClient implements ClientModInitializer {
+    /**
+     * Registers entity renderers, client-side network receivers, and the
+     * {@link mc.quackedducks.QuackMod#PACKET_SENDER} hook used by common code
+     * to send payloads without loader-specific imports.
+     */
     @Override
     public void onInitializeClient() {
         EntityRendererRegistry.register(QuackEntityTypes.DUCK, DuckRenderer::new);
@@ -31,6 +36,8 @@ public final class QuackModFabricClient implements ClientModInitializer {
                 c.duckHeight = payload.duckHeight();
                 c.movementSpeed = payload.movementSpeed();
                 c.ambientSoundInterval = payload.ambientSoundInterval();
+                c.migrationCooldownTicks = payload.migrationCooldownTicks();
+                c.dabChance = payload.dabChance();
                 QuackConfig.get().validate();
 
                 // Update all existing ducks in the client world

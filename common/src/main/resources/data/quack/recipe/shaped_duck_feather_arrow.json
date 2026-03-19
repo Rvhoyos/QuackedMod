@@ -1,6 +1,5 @@
 {
     "type": "minecraft:crafting_shaped",
-    "id": "quack:shaped_duck_feather_arrow",
     "pattern": [
         " P ",
         " F ",

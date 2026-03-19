@@ -28,3 +28,8 @@ Thumbs.db
 
 **/bin/
 .envrc
+
+# --- Claude Code ---
+CLAUDE.md
+.claude/
+.cache/
