@@ -21,7 +21,7 @@ import net.minecraft.world.level.ItemLike;
  * Intended use: register in {@link DuckEntity#registerGoals()} after survival/breeding goals.
  */
 public class LayEggGoal extends Goal{
-    private final Supplier<? extends ItemLike> eggItemSupplier;  //explore suppliers and use of ? generics ? 
+    private final Supplier<? extends ItemLike> eggItemSupplier;
 
     private final DuckEntity self;
     /** Minimum and maximum interval (in ticks) between egg lays. */

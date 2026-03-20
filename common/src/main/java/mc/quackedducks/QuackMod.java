@@ -43,19 +43,31 @@ public final class QuackMod {
         QuackyModItems.init();
     }
 
+    /**
+     * Loader-injected handler that sends an {@link mc.quackedducks.network.QuackNetwork.OpenConfigGuiPayload}
+     * to the given player, causing the client to open {@link mc.quackedducks.client.gui.QuackConfigScreen}.
+     * Back-filled by each loader entrypoint before any command can invoke it.
+     */
     public static java.util.function.Consumer<net.minecraft.server.level.ServerPlayer> CONFIG_OPENER = (p) -> {
         LOGGER.warn("Config opener not initialized!");
     };
 
+    /** Sends an {@link mc.quackedducks.network.QuackNetwork.OpenConfigGuiPayload} to {@code player}. */
     public static void openConfigGui(net.minecraft.server.level.ServerPlayer player) {
         CONFIG_OPENER.accept(player);
     }
 
+    /**
+     * Loader-injected handler that forwards an {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload}
+     * from the client GUI to the server. Back-filled by each loader entrypoint before
+     * the config screen can be opened.
+     */
     public static java.util.function.Consumer<mc.quackedducks.network.QuackNetwork.UpdateConfigPayload> PACKET_SENDER = (
             p) -> {
         LOGGER.warn("Packet sender not initialized!");
     };
 
+    /** Sends an {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} to the server. */
     public static void sendConfigUpdate(mc.quackedducks.network.QuackNetwork.UpdateConfigPayload payload) {
         PACKET_SENDER.accept(payload);
     }

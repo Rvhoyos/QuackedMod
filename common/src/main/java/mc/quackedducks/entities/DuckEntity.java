@@ -95,8 +95,8 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
 
     // --- Debug logging ---
     private static final Logger LOG = LogUtils.getLogger();
-    /** Flip to false to silence all duck debug logs without rebuilding logic. */
-    private static final boolean DEBUG_DUCKS = true;
+    /** Flip to true to enable verbose duck AI/animation debug logs. Off by default in releases. */
+    private static final boolean DEBUG_DUCKS = false;
 
     /** Which follower slot a duck occupies behind its leader (used for V-formation offsets). */
     public enum FollowerSlot { LEFT, RIGHT }
@@ -236,9 +236,9 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      *
      * Priority order:
      *   0) Active DAB one-shot — holds until finished
-     *   1) Airborne (!onGround()) → FLY (loop)
+     *   1) Airborne (!onGround() &amp;&amp; !isInWater()) → FLY (loop)
      *   2) PANIC hint (fleeing/avoiding) → PANIC_ANIM (loop)
-     *   3) Moving on ground → WALK (loop)
+     *   3) Moving on ground or water → WALK (loop)
      *   4) Idle → IDLE (loop), with rare DAB one-shot variant
      */
     @Override
@@ -267,8 +267,10 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                         return PlayState.CONTINUE;
                     }
 
-                    // 1) Flying — checked before ground states
-                    if (!this.onGround()) {
+                    // 1) Flying — checked before ground states.
+                    // Exclude water: floating ducks are not onGround() but should not
+                    // play the flap animation — they should idle or walk on the surface.
+                    if (!this.onGround() && !this.isInWater()) {
                         state.setAndContinue(FLY);
                         return PlayState.CONTINUE;
                     }
@@ -422,7 +424,9 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                 case MIGRATE, FOLLOW_LEADER_AIR,
                      FOLLOW_OWNER, FOLLOW_LEADER_GROUND,
                      FOLLOW_PARENT, WANDER           -> HINT_WALK;
-                case IDLE                            -> HINT_IDLE;
+                // LANDING: duck is physically airborne (!onGround()), so the animation
+                // controller always picks FLY regardless of HINT_IDLE here.
+                case LANDING, IDLE                   -> HINT_IDLE;
             };
         }
 
@@ -508,7 +512,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     @Override
     protected void registerGoals() {
         // 0: Float (JUMP flag only — never blocks MOVE goals)
-        this.goalSelector.addGoal(0, new mc.quackedducks.entities.ai.DuckFloatGoal(this));
+        this.goalSelector.addGoal(0, new net.minecraft.world.entity.ai.goal.FloatGoal(this));
 
         // 0: Lay eggs (no flags — runs independently of all movement goals)
         this.goalSelector.addGoal(0, new mc.quackedducks.entities.ai.LayEggGoal(this, 600, 40000000,

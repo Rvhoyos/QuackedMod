@@ -7,7 +7,6 @@ import com.mojang.logging.LogUtils;
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.entities.DuckEntity;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -76,6 +75,14 @@ public class DuckBrainGoal extends Goal {
         MIGRATE,
         /** Follower duck → flies in V-formation behind its leader while leader is airborne. */
         FOLLOW_LEADER_AIR,
+        /**
+         * Transitional state entered whenever an airborne state ends.
+         * {@code stopFlying()} is called on entry (gravity re-engages); no nav is issued
+         * until the duck physically lands ({@code onGround()} or 60-tick timeout).
+         * Never selected by the priority scan — only entered via the intercept in
+         * {@link #doTransition}.
+         */
+        LANDING,
         /** Tamed adult leader → walks toward owner when nearby and head-stable. */
         FOLLOW_OWNER,
         /** Follower duck → walks toward its leader while leader is on the ground. */
@@ -98,19 +105,28 @@ public class DuckBrainGoal extends Goal {
     private static final double FOLLOW_GND_NEAR_SPEED = 0.55;
     private static final double STROLL_SPEED          = 1.08;
     private static final double FOLLOW_PARENT_SPEED   = 1.10;
+    private static final double LANDING_DESCEND_SPEED = 0.7;
 
     // ── Follow-leader geometry ────────────────────────────────────────────────
     private static final float  SEARCH_RADIUS  = 18.0F;
     private static final float  START_DIST     = 4.2F;
     private static final float  STOP_DIST      = 2.0F;
     private static final double FAR_MULTIPLIER = 2.25;  // far² = (startDist * FAR_MULT)²
-    private static final float  OWNER_STOP_DIST = 4.0F;
+    private static final float  OWNER_STOP_DIST    = 4.0F;
+    /** Beyond this distance FOLLOW_OWNER stops; re-engages when owner re-enters START_FOLLOW_OWNER_DIST. */
+    private static final float  OWNER_FOLLOW_MAX_DIST = 20.0F;
+
+    // ── Stability / hysteresis ────────────────────────────────────────────────
+    /** Ticks after a non-panic state is entered before non-panic preemptions are allowed. */
+    private static final int MIN_STATE_TICKS = 15;
+    /** Max ticks LANDING stays active waiting for the duck to touch down. */
+    private static final int MAX_LANDING_TICKS = 60;
+    /** Skip moveTo in follow-leader if target moved less than this distance² since last issue. */
+    private static final double FOLLOW_REPATH_THRESHOLD_SQ = 1.0;
 
     // ── Core ─────────────────────────────────────────────────────────────────
     private final DuckEntity duck;
     private BrainState currentState = BrainState.IDLE;
-    /** Tracks whether water guard fired last tick to avoid log spam. */
-    private boolean wasWaterGuardActive = false;
 
     // ── MIGRATE ───────────────────────────────────────────────────────────────
     private int  migrateCooldown = 0;
@@ -123,6 +139,8 @@ public class DuckBrainGoal extends Goal {
     private DuckEntity              claimedLeader  = null;
     private DuckEntity.FollowerSlot mySlot         = null;
     private int                     repathCooldown = 0;
+    /** Last target position passed to moveTo; used to skip repath when target barely moved. */
+    private Vec3                    lastIssuedFollowTarget = null;
 
     // ── WANDER ────────────────────────────────────────────────────────────────
     private Vec3 wanderTarget = null;
@@ -130,6 +148,14 @@ public class DuckBrainGoal extends Goal {
     // ── Locomotion ────────────────────────────────────────────────────────────
     /** True when an airborne transition was requested while duck was underwater. */
     private boolean pendingTakeoff = false;
+
+    // ── Hysteresis / LANDING ──────────────────────────────────────────────────
+    /** Countdown after state entry; non-panic preemptions by higher-priority states are blocked while > 0. */
+    private int     minStateTicksLeft = 0;
+    /** Set in doTransition's airborne→ground intercept; cleared in enterState(LANDING). */
+    private boolean pendingLanding    = false;
+    /** Countdown during LANDING; forces exit after MAX_LANDING_TICKS even if duck is still airborne. */
+    private int     landingTicks      = 0;
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -167,25 +193,12 @@ public class DuckBrainGoal extends Goal {
         // isUnderWater() = eyes below surface, NOT just touching water.
         if (duck.isUnderWater() && !duck.inFlyingMode()) {
             duck.getNavigation().stop();
-            if (!wasWaterGuardActive) {
-                LOG.info("[BRAIN id={}] water guard ON  state={} y={} inWater={} isUnderWater={}",
-                        duck.getId(), currentState,
-                        String.format("%.2f", duck.getY()),
-                        duck.isInWater(), duck.isUnderWater());
-                wasWaterGuardActive = true;
-            }
             return;
         }
-        if (wasWaterGuardActive) {
-            LOG.info("[BRAIN id={}] water guard OFF state={} y={} inWater={}",
-                    duck.getId(), currentState,
-                    String.format("%.2f", duck.getY()),
-                    duck.isInWater());
-            wasWaterGuardActive = false;
-        }
 
-        // 3. Advance migrate cooldown every tick.
+        // 3. Advance cooldowns every tick.
         if (migrateCooldown > 0) migrateCooldown--;
+        if (minStateTicksLeft > 0) minStateTicksLeft--;
 
         // 4. Find the highest-priority state that should run.
         BrainState desired = findBestState();
@@ -211,11 +224,18 @@ public class DuckBrainGoal extends Goal {
      *
      * <ul>
      *   <li>States with lower ordinal than current: checked for {@link #canEnter}
-     *       — any match immediately preempts.</li>
+     *       — panic states (ordinals 0–1) always preempt; other higher-priority
+     *       states are blocked by {@link #minStateTicksLeft} hysteresis
+     *       <em>only while the current state is still running</em>.</li>
      *   <li>Current state: kept if {@link #canContinue} is true.</li>
      *   <li>States with higher ordinal: only considered once the current state
      *       is done; first {@link #canEnter} wins.</li>
      * </ul>
+     *
+     * <p>Hysteresis bypass: when {@code canContinue(current)=false} (i.e. the
+     * current state has ended), the hysteresis window is ignored so that
+     * higher-priority states can immediately take over without the duck
+     * temporarily falling to {@link BrainState#IDLE} and losing formation slots.
      *
      * @return the state that should be active after this tick
      */
@@ -227,7 +247,15 @@ public class DuckBrainGoal extends Goal {
             int ord = s.ordinal();
             if (ord < cur) {
                 // Higher-priority state — can it preempt?
-                if (canEnter(s)) return s;
+                // Panic states always preempt.
+                // Other higher-priority states are blocked by hysteresis ONLY while the
+                // current state is still running (curDone=false). When the current state
+                // has already ended (curDone=true), all states compete freely so that
+                // e.g. FOLLOW_LEADER_AIR can immediately replace a finished
+                // FOLLOW_LEADER_GROUND without the slot being momentarily released.
+                boolean isPanic = ord <= BrainState.PANIC_GROUND.ordinal();
+                boolean hysteresisBlocks = !isPanic && !curDone && minStateTicksLeft > 0;
+                if (!hysteresisBlocks && canEnter(s)) return s;
             } else if (s == currentState) {
                 if (!curDone) return s;   // keep running
                 // current is done; fall through to lower-priority states
@@ -243,9 +271,16 @@ public class DuckBrainGoal extends Goal {
 
     /**
      * Returns true if the duck may <em>begin</em> the given state this tick.
-     * Called speculatively during priority scanning — must be side-effect-free
-     * except for {@code pendingLeader} / {@code wanderTarget} assignments, which
-     * are written here and consumed in {@link #enterState}.
+     *
+     * <p>Called speculatively during the priority scan in {@link #findBestState}.
+     * Must be side-effect-free except for the following intentional writes:
+     * <ul>
+     *   <li>{@code pendingLeader} — set by the follow-leader helpers to avoid
+     *       a redundant AABB search in {@link #enterState}.</li>
+     *   <li>{@code wanderTarget} — set by {@link #canStartWander} so the
+     *       position computed here is reused verbatim in {@link #enterState}.</li>
+     * </ul>
+     * Neither write has observable side effects before {@link #enterState} consumes them.
      */
     private boolean canEnter(BrainState s) {
         return switch (s) {
@@ -253,6 +288,9 @@ public class DuckBrainGoal extends Goal {
             case PANIC_GROUND         -> duck.isBaby() && shouldPanic();
             case MIGRATE              -> canStartMigrate();
             case FOLLOW_LEADER_AIR    -> canStartFollowLeaderAir();
+            // LANDING is never entered via the priority scan — only via doTransition intercept.
+            // pendingLanding is true only for the single tick of the intercepted transition.
+            case LANDING              -> pendingLanding;
             case FOLLOW_OWNER         -> canStartFollowOwner();
             case FOLLOW_LEADER_GROUND -> canStartFollowLeaderGround();
             case FOLLOW_PARENT        -> duck.isBaby() && findParent() != null;
@@ -265,8 +303,11 @@ public class DuckBrainGoal extends Goal {
 
     /**
      * Returns true if the duck may <em>keep running</em> the given state this tick.
-     * When this returns false for the current state, {@link #findBestState()} falls
-     * through to lower-priority states.
+     *
+     * <p>When this returns false for the current state, {@link #findBestState()}
+     * sets {@code curDone=true} and falls through: higher-priority states are checked
+     * without hysteresis, then lower-priority states. The state machine never gets
+     * "stuck" in a finished state.
      */
     private boolean canContinue(BrainState s) {
         return switch (s) {
@@ -278,8 +319,14 @@ public class DuckBrainGoal extends Goal {
                 DuckEntity l = duck.getLeader();
                 yield l != null && l.isAlive() && !l.isRemoved() && l.inFlyingMode();
             }
-            case FOLLOW_OWNER ->
-                    duck.isTame() && duck.isLeader() && ownerAlive();
+            // Stay in LANDING until the duck physically touches down, or the timeout expires.
+            case LANDING -> !duck.onGround() && landingTicks > 0;
+            case FOLLOW_OWNER -> {
+                var owner = duck.getOwner();
+                yield duck.isTame() && duck.isLeader()
+                        && owner != null && owner.isAlive()
+                        && duck.distanceTo(owner) < OWNER_FOLLOW_MAX_DIST;
+            }
             case FOLLOW_LEADER_GROUND -> {
                 DuckEntity l = duck.getLeader();
                 yield l != null && l.isAlive() && !l.isRemoved() && !l.inFlyingMode();
@@ -398,53 +445,107 @@ public class DuckBrainGoal extends Goal {
      * through here so that startFlying/stopFlying can never be called from two
      * different code paths in the same tick.
      *
-     * <p>Also handles the {@code pendingTakeoff} deferral: if a transition to an
-     * airborne state is requested while the duck is underwater, the actual
-     * {@code startFlying()} call is deferred until the duck surfaces (checked at
-     * the top of {@link #tick()}).
+     * <h4>LANDING intercept</h4>
+     * <p>Every airborne→ground transition is intercepted: {@code to} is replaced with
+     * {@link BrainState#LANDING} and {@code pendingLanding} is set. Flying mode is
+     * <strong>kept active</strong> so that {@code flyingNav} can issue a graceful descent
+     * command in {@link #enterState}. {@code stopFlying()} is deferred: it is called in
+     * {@link #tickCurrentState} when nav completes or the 60-tick timeout fires, and
+     * {@link #exitState} provides a safety-net call in case LANDING is preempted early.
+     *
+     * <h4>keepSlot preservation across LANDING</h4>
+     * <p>{@code keepSlot} is computed from the <em>original</em> {@code from/to} pair
+     * before the intercept rewrites {@code to}. This ensures that a
+     * {@code FOLLOW_LEADER_AIR → FOLLOW_LEADER_GROUND} transition preserves the
+     * formation slot through the LANDING bridge without momentarily releasing it.
+     *
+     * <h4>Hysteresis</h4>
+     * <p>After entering any non-panic, non-IDLE state, {@link #minStateTicksLeft} is set
+     * to {@value #MIN_STATE_TICKS}. While positive, non-panic higher-priority states
+     * cannot preempt — but only when the current state is still running; see
+     * {@link #findBestState}.
+     *
+     * <h4>pendingTakeoff deferral</h4>
+     * <p>If a transition to an airborne state fires while {@code isUnderWater()},
+     * {@code startFlying()} is deferred until the duck surfaces (checked at the top
+     * of {@link #tick()}). This prevents takeoff from the ocean floor.
      */
     private void doTransition(BrainState from, BrainState to) {
+        // keepSlot is computed from the ORIGINAL intent (before any LANDING intercept)
+        // so that FOLLOW_LEADER_AIR → FOLLOW_LEADER_GROUND preserves the formation slot
+        // even though the actual transition goes through LANDING.
+        boolean keepSlot = isFollowLeaderState(from) && isFollowLeaderState(to);
+
+        // Intercept: every airborne→ground transition routes through LANDING first.
+        // stopFlying() is called on LANDING entry; no new nav until the duck lands.
+        if (isAirborne(from) && !isAirborne(to) && to != BrainState.LANDING) {
+            pendingLanding = true;
+            to = BrainState.LANDING;
+        }
+
         LOG.info("[BRAIN id={}] {} → {} y={} inWater={} flying={}",
                 duck.getId(), from, to,
                 String.format("%.2f", duck.getY()),
                 duck.isInWater(), duck.inFlyingMode());
-        // GROUND↔AIR transitions between the two follow-leader states preserve
-        // the claimed slot so we don't momentarily release and risk losing it.
-        boolean keepSlot = isFollowLeaderState(from) && isFollowLeaderState(to);
 
         exitState(from, keepSlot);
 
         // Locomotion mode change — single point of truth for startFlying/stopFlying.
-        boolean fromAir = isAirborne(from);
+        // fromAir includes LANDING-while-still-flying so that LANDING→panic keeps flying mode,
+        // and LANDING→ground calls stopFlying() correctly in the safety-net path.
+        boolean fromAir = isAirborne(from) || (from == BrainState.LANDING && duck.inFlyingMode());
         boolean toAir   = isAirborne(to);
         if (fromAir && !toAir) {
-            duck.stopFlying();
             pendingTakeoff = false;
+            // LANDING keeps flying mode so flyingNav can descend gracefully;
+            // stopFlying() is deferred to tickCurrentState(LANDING).
+            if (to != BrainState.LANDING) {
+                duck.stopFlying();
+            }
         } else if (!fromAir && toAir) {
             if (!duck.isUnderWater()) duck.startFlying();
             else pendingTakeoff = true;   // FloatGoal will surface the duck first
         }
 
         enterState(to, keepSlot);
+
+        // Hysteresis: after entering any non-panic, non-IDLE state, block non-panic
+        // higher-priority preemptions for MIN_STATE_TICKS to prevent rapid oscillation.
+        if (to.ordinal() > BrainState.PANIC_GROUND.ordinal() && to != BrainState.IDLE) {
+            minStateTicksLeft = MIN_STATE_TICKS;
+        }
+
         currentState = to;
     }
 
     /**
      * Cleans up state-specific resources when leaving {@code s}.
      *
-     * @param keepSlot when true, the follow-leader slot is preserved across a
-     *                 ground↔air transition so the duck doesn't momentarily
-     *                 release and risk losing its position in the formation
+     * <p>Called unconditionally before every state transition. Stops the navigator
+     * for all motion-generating states so the pathfinder is not left running with
+     * a stale path after the locomotion mode changes.
+     *
+     * @param keepSlot when true (only for FOLLOW_LEADER_AIR↔FOLLOW_LEADER_GROUND
+     *                 transitions), the follow-leader slot on the leader is NOT
+     *                 released, preserving formation position across the mode switch.
+     *                 {@code keepSlot} is computed from the original {@code from/to}
+     *                 pair in {@link #doTransition} before any LANDING intercept.
      */
     private void exitState(BrainState s, boolean keepSlot) {
         switch (s) {
-            case PANIC_FLY, PANIC_GROUND, MIGRATE,
-                 FOLLOW_OWNER, FOLLOW_PARENT, WANDER ->
+            case PANIC_FLY, PANIC_GROUND, MIGRATE, WANDER ->
                     duck.getNavigation().stop();
+
+            case FOLLOW_OWNER, FOLLOW_PARENT -> {
+                duck.getNavigation().stop();
+                repathCooldown         = 0;
+                lastIssuedFollowTarget = null;
+            }
 
             case FOLLOW_LEADER_AIR, FOLLOW_LEADER_GROUND -> {
                 duck.getNavigation().stop();
                 repathCooldown = 0;
+                lastIssuedFollowTarget = null;
                 if (!keepSlot) {
                     DuckEntity current = duck.getLeader();
                     if (current != null) current.releaseFollower(duck);
@@ -455,7 +556,13 @@ public class DuckBrainGoal extends Goal {
                 }
             }
 
-            case IDLE -> {} // nothing to clean up
+            case LANDING -> {
+                // Safety net: stopFlying() is normally called by tickCurrentState when
+                // the descent nav completes. If LANDING is preempted early (e.g. panic)
+                // before that happens, ensure flying mode is cleaned up here.
+                if (duck.inFlyingMode()) duck.stopFlying();
+            }
+            case IDLE    -> {} // nothing to clean up
         }
 
         // Cooldown starts when migration ends, not when it begins.
@@ -467,8 +574,22 @@ public class DuckBrainGoal extends Goal {
 
     /**
      * Initialises state-specific resources when entering {@code s}.
-     * For follow-leader states, claims a slot from {@code pendingLeader} unless
-     * {@code keepSlot} is true (ground↔air transition — slot already held).
+     *
+     * <p>For PANIC_FLY/GROUND, MIGRATE, and WANDER: issues a single {@code moveTo}
+     * call that drives the entire state's navigation. The navigator handles movement
+     * until {@code isDone()} triggers {@link #canContinue} to return false.
+     *
+     * <p>For FOLLOW_LEADER_AIR/GROUND: claims a slot from {@code pendingLeader} (set
+     * by {@link #canEnter}) unless {@code keepSlot=true}, in which case the slot was
+     * already claimed and is merely preserved.
+     *
+     * <p>For LANDING: consumes {@link #pendingLanding} and arms the {@link #landingTicks}
+     * timeout. Issues a {@code flyingNav.moveTo} to {@code groundY + 1.5} so the duck
+     * glides down under flying control. {@code stopFlying()} is deferred to
+     * {@link #tickCurrentState} when that nav completes or the timeout fires.
+     *
+     * @param s       the state being entered
+     * @param keepSlot true when the follow-leader slot survives from the previous state
      */
     private void enterState(BrainState s, boolean keepSlot) {
         switch (s) {
@@ -483,9 +604,36 @@ public class DuckBrainGoal extends Goal {
                     duck.getNavigation().moveTo(pos.x, pos.y, pos.z, PANIC_SPEED);
             }
             case MIGRATE -> {
-                if (migrateTarget != null)
+                if (migrateTarget != null) {
+                    // Default FOLLOW_RANGE (~16 blocks) gives a ±24-block PathNavigationRegion —
+                    // far too small for 80–140 block migration targets. Expand the required path
+                    // length to cover the full distance before calling moveTo.
+                    double dist = duck.position().distanceTo(migrateTarget);
+                    duck.getNavigation().setRequiredPathLength((float) dist + 16.0f);
                     duck.getNavigation().moveTo(
                             migrateTarget.x, migrateTarget.y, migrateTarget.z, MIGRATE_SPEED);
+                    LOG.info("[BRAIN id={}] MIGRATE nav to ({},{},{}) dist={} navDone={}",
+                            duck.getId(),
+                            String.format("%.1f", migrateTarget.x),
+                            String.format("%.1f", migrateTarget.y),
+                            String.format("%.1f", migrateTarget.z),
+                            String.format("%.1f", dist),
+                            duck.getNavigation().isDone());
+                }
+            }
+            case LANDING -> {
+                pendingLanding = false;
+                landingTicks   = MAX_LANDING_TICKS;
+                // Duck is still in flying mode. Issue a descent nav command so
+                // flyingNav glides it down to just above the terrain surface.
+                // stopFlying() + velocity zeroing are deferred to tickCurrentState.
+                if (duck.inFlyingMode()) {
+                    int groundY = duck.level().getHeight(
+                            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            (int) duck.getX(), (int) duck.getZ());
+                    duck.getNavigation().moveTo(
+                            duck.getX(), groundY + 1.5, duck.getZ(), LANDING_DESCEND_SPEED);
+                }
             }
             case FOLLOW_LEADER_AIR, FOLLOW_LEADER_GROUND -> {
                 if (!keepSlot && pendingLeader != null) {
@@ -508,15 +656,14 @@ public class DuckBrainGoal extends Goal {
                 if (wanderTarget != null) {
                     duck.getNavigation().moveTo(
                             wanderTarget.x, wanderTarget.y, wanderTarget.z, STROLL_SPEED);
-                    LOG.info("[BRAIN id={}] WANDER start duck=({},{},{}) target=({},{},{}) inWater={}",
-                            duck.getId(),
-                            String.format("%.1f", duck.getX()), String.format("%.1f", duck.getY()), String.format("%.1f", duck.getZ()),
-                            String.format("%.1f", wanderTarget.x), String.format("%.1f", wanderTarget.y), String.format("%.1f", wanderTarget.z),
-                            duck.isInWater());
                     wanderTarget = null;
                 }
             }
-            case FOLLOW_OWNER, FOLLOW_PARENT, IDLE -> {} // nav driven by tick
+            case FOLLOW_OWNER, FOLLOW_PARENT -> {
+                repathCooldown         = 0;
+                lastIssuedFollowTarget = null;
+            }
+            case IDLE -> {} // nav driven by tick
         }
     }
 
@@ -525,6 +672,17 @@ public class DuckBrainGoal extends Goal {
     private void tickCurrentState() {
         switch (currentState) {
             case PANIC_FLY, PANIC_GROUND, WANDER, IDLE -> {}   // nav handles movement
+            case LANDING -> {
+                if (landingTicks > 0) landingTicks--;
+                // Finish the landing once flyingNav reaches the target (or timeout).
+                // Zero vertical velocity before handing off to gravity so the duck
+                // falls the remaining ~1.5 blocks from rest rather than diving.
+                if (duck.inFlyingMode() && (duck.getNavigation().isDone() || landingTicks == 0)) {
+                    Vec3 mv = duck.getDeltaMovement();
+                    duck.setDeltaMovement(new Vec3(mv.x, 0, mv.z));
+                    duck.stopFlying();
+                }
+            }
             case MIGRATE -> {
                 if (migrateTarget != null)
                     duck.getLookControl().setLookAt(
@@ -541,12 +699,17 @@ public class DuckBrainGoal extends Goal {
      * Per-tick logic shared by {@link BrainState#FOLLOW_LEADER_AIR} and
      * {@link BrainState#FOLLOW_LEADER_GROUND}.
      *
-     * <p>Ground mode water guard: if the leader is anywhere in water,
-     * nav is stopped and the follower waits on land. The follower resumes
-     * automatically once the leader exits the water.
+     * <h4>Ground water guard</h4>
+     * <p>If the leader is anywhere in water, nav is stopped, {@link #repathCooldown}
+     * and {@link #lastIssuedFollowTarget} are cleared, and the follower parks until
+     * the leader exits the water. Clearing the cooldown ensures any previously-committed
+     * underwater path is abandoned immediately rather than surviving 8–10 more ticks.
      *
-     * <p>Repath cooldown: after issuing a {@code moveTo}, the duck skips
-     * re-pathing for several ticks to avoid thrashing the pathfinder.
+     * <h4>Repath threshold</h4>
+     * <p>After the repath cooldown expires, a new {@code moveTo} is skipped if the
+     * new target is within {@value #FOLLOW_REPATH_THRESHOLD_SQ} blocks² of the last
+     * issued target AND the navigator is still running. This prevents constant
+     * pathfinder calls when the leader is barely moving.
      *
      * @param airborne true → {@link BrainState#FOLLOW_LEADER_AIR} (flying nav,
      *                 V-formation target); false → {@link BrainState#FOLLOW_LEADER_GROUND}
@@ -556,11 +719,16 @@ public class DuckBrainGoal extends Goal {
         DuckEntity leader = duck.getLeader();
         if (leader == null) return;
 
-        // Ground only: if leader is anywhere in water, park and wait.
-        // Never navigate to a position inside water — that causes the follower to walk in and drown.
-        // Follower resumes automatically once leader exits water.
-        if (!airborne && leader.isInWater()) {
+        // Ground only: park and wait only when leader is actually submerged (eyes below surface).
+        // Using isUnderWater() NOT isInWater() — a surface-floating leader has isInWater=true
+        // but isUnderWater=false; using isInWater would freeze followers any time the leader
+        // touches water. groundNav.canFloat=true handles navigation to water-surface positions.
+        // Clears repathCooldown so any previously-committed underwater path is abandoned
+        // immediately rather than surviving another 8–10 ticks.
+        if (!airborne && leader.isUnderWater()) {
             duck.getNavigation().stop();
+            repathCooldown         = 0;
+            lastIssuedFollowTarget = null;
             return;
         }
 
@@ -571,72 +739,96 @@ public class DuckBrainGoal extends Goal {
         double stopDistSq = STOP_DIST * STOP_DIST;
         double far2       = START_DIST * START_DIST * (FAR_MULTIPLIER * FAR_MULTIPLIER);
 
+        if (distSq <= stopDistSq) {
+            duck.getNavigation().stop();
+            return;
+        }
+
         if (repathCooldown > 0) { repathCooldown--; return; }
 
-        if (distSq > far2) {
-            duck.getNavigation().moveTo(target.x, target.y, target.z,
-                    airborne ? FOLLOW_AIR_FAR_SPEED : FOLLOW_GND_FAR_SPEED);
-            LOG.info("[BRAIN id={}] follow {} repath FAR  duck=({},{},{}) target=({},{},{}) inWater={}",
-                    duck.getId(), airborne ? "AIR" : "GND",
-                    String.format("%.1f", duck.getX()), String.format("%.1f", duck.getY()), String.format("%.1f", duck.getZ()),
-                    String.format("%.1f", target.x), String.format("%.1f", target.y), String.format("%.1f", target.z),
-                    duck.isInWater());
-            repathCooldown = 8;
-        } else if (distSq > stopDistSq) {
-            duck.getNavigation().moveTo(target.x, target.y, target.z,
-                    airborne ? FOLLOW_AIR_NEAR_SPEED : FOLLOW_GND_NEAR_SPEED);
-            LOG.info("[BRAIN id={}] follow {} repath NEAR duck=({},{},{}) target=({},{},{}) inWater={}",
-                    duck.getId(), airborne ? "AIR" : "GND",
-                    String.format("%.1f", duck.getX()), String.format("%.1f", duck.getY()), String.format("%.1f", duck.getZ()),
-                    String.format("%.1f", target.x), String.format("%.1f", target.y), String.format("%.1f", target.z),
-                    duck.isInWater());
-            repathCooldown = 10;
-        } else {
-            duck.getNavigation().stop();
+        // Skip moveTo if the target hasn't moved enough AND nav is still running.
+        // Prevents constant path thrashing when the leader is barely moving.
+        if (lastIssuedFollowTarget != null
+                && lastIssuedFollowTarget.distanceToSqr(target) < FOLLOW_REPATH_THRESHOLD_SQ
+                && !duck.getNavigation().isDone()) {
+            return;
         }
+
+        double speed;
+        int    cooldown;
+        if (distSq > far2) {
+            speed    = airborne ? FOLLOW_AIR_FAR_SPEED  : FOLLOW_GND_FAR_SPEED;
+            cooldown = 8;
+        } else {
+            speed    = airborne ? FOLLOW_AIR_NEAR_SPEED : FOLLOW_GND_NEAR_SPEED;
+            cooldown = 10;
+        }
+
+        duck.getNavigation().moveTo(target.x, target.y, target.z, speed);
+        lastIssuedFollowTarget = target;
+        repathCooldown = cooldown;
     }
 
-    /**
-     * Computes the navigation target position for a following duck.
-     *
-     * <ul>
-     *   <li>Airborne + directly behind a chain-head leader: heading-relative
-     *       V-formation offset (4 back, ±3 lateral, 1.5 below).</li>
-     *   <li>All other cases (ground follow, or mid-chain aerial): leader's
-     *       current position (single-file).</li>
-     * </ul>
-     */
+    /** Returns the navigation target for a following duck — always the leader's position (single-file). */
     private Vec3 getFollowerTargetPos(DuckEntity leader, boolean airborne) {
-        if (airborne && leader.isLeader() && mySlot != null) {
-            float yawRad = leader.getYRot() * (float)(Math.PI / 180.0);
-            Vec3 forward = new Vec3(-Mth.sin(yawRad), 0, Mth.cos(yawRad));
-            Vec3 right   = new Vec3(forward.z, 0, -forward.x);
-            double side  = (mySlot == DuckEntity.FollowerSlot.LEFT) ? -1.0 : 1.0;
-            return leader.position()
-                    .subtract(forward.scale(4.0))
-                    .add(right.scale(side * 3.0))
-                    .add(0, -1.5, 0);
-        }
         return leader.position();
     }
 
+    /**
+     * Per-tick logic for {@link BrainState#FOLLOW_OWNER}.
+     *
+     * <p>Applies the same repath cooldown and target-change threshold as
+     * {@link #tickFollowLeader} to avoid issuing a new path to the pathfinder
+     * every tick. No water guard — the owner may intentionally be swimming and
+     * the tamed duck should follow.
+     */
     private void tickFollowOwner() {
         var owner = duck.getOwner();
         if (owner == null) return;
         duck.getLookControl().setLookAt(owner, 10.0F, duck.getMaxHeadXRot());
-        if (duck.distanceTo(owner) > OWNER_STOP_DIST)
-            duck.getNavigation().moveTo(owner.getX(), owner.getY(), owner.getZ(), OWNER_SPEED);
-        else
+        if (duck.distanceTo(owner) <= OWNER_STOP_DIST) {
             duck.getNavigation().stop();
+            return;
+        }
+        if (repathCooldown > 0) { repathCooldown--; return; }
+        Vec3 target = owner.position();
+        if (lastIssuedFollowTarget != null
+                && lastIssuedFollowTarget.distanceToSqr(target) < FOLLOW_REPATH_THRESHOLD_SQ
+                && !duck.getNavigation().isDone()) {
+            return;
+        }
+        duck.getNavigation().moveTo(target.x, target.y, target.z, OWNER_SPEED);
+        lastIssuedFollowTarget = target;
+        repathCooldown = 8;
     }
 
+    /**
+     * Per-tick logic for {@link BrainState#FOLLOW_PARENT}.
+     *
+     * <p>Applies the same repath cooldown and target-change threshold as
+     * {@link #tickFollowLeader}. When the repath cooldown is active the
+     * {@code findParent()} AABB search is skipped entirely — the navigator
+     * is already running to the previously issued target and the baby duck
+     * just looks at the last-known parent direction via the look control.
+     */
     private void tickFollowParent() {
+        if (repathCooldown > 0) { repathCooldown--; return; }
         DuckEntity parent = findParent();
         if (parent == null) return;
         duck.getLookControl().setLookAt(parent, 10.0F, duck.getMaxHeadXRot());
-        if (duck.distanceTo(parent) > 3.0F)
-            duck.getNavigation().moveTo(parent.getX(), parent.getY(), parent.getZ(),
-                    FOLLOW_PARENT_SPEED);
+        if (duck.distanceTo(parent) <= 3.0F) {
+            duck.getNavigation().stop();
+            return;
+        }
+        Vec3 target = parent.position();
+        if (lastIssuedFollowTarget != null
+                && lastIssuedFollowTarget.distanceToSqr(target) < FOLLOW_REPATH_THRESHOLD_SQ
+                && !duck.getNavigation().isDone()) {
+            return;
+        }
+        duck.getNavigation().moveTo(target.x, target.y, target.z, FOLLOW_PARENT_SPEED);
+        lastIssuedFollowTarget = target;
+        repathCooldown = 8;
     }
 
     // ── Entity search helpers ─────────────────────────────────────────────────

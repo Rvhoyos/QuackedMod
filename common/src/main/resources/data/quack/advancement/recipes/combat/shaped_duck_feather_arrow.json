@@ -1,0 +1,22 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": ["quack:shaped_duck_feather_arrow"]
+  },
+  "criteria": {
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "quack:shaped_duck_feather_arrow"
+      }
+    },
+    "has_duck_feather": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [{"items": ["quack:duck_feather"]}]
+      }
+    }
+  },
+  "requirements": [["has_the_recipe", "has_duck_feather"]],
+  "sends_telemetry_data": false
+}

@@ -22,10 +22,14 @@ public class GroundOnlyAvoidGoal<T extends LivingEntity> extends AvoidEntityGoal
         this.duck = duck;
     }
 
-    /** Returns false when airborne — predators can't reach flying ducks. */
+    /**
+     * Returns false when airborne (predators can't reach flying ducks) or when
+     * the duck is tamed (domesticated ducks don't flee from predators).
+     */
     @Override
     public boolean canUse() {
         if (duck.inFlyingMode()) return false;
+        if (duck.isTame()) return false;
         return super.canUse();
     }
 }

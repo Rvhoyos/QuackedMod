@@ -123,10 +123,13 @@ public class QuackConfig {
             instance = new QuackConfig(); // Fallback
         }
 
-        // Version check
+        // Version migration: preserve existing values, update version, re-save so any
+        // fields added in the new version are written with their defaults.
+        // Never wipe the config — users lose their customizations that way.
         if (instance.configVersion != CURRENT_VERSION) {
-            QuackMod.LOGGER.info("Quack config version mismatch. Resetting to defaults.");
-            instance = new QuackConfig();
+            QuackMod.LOGGER.info("Quack config migrated from version {} to {}; new fields use defaults.",
+                    instance.configVersion, CURRENT_VERSION);
+            instance.configVersion = CURRENT_VERSION;
             save();
         }
         instance.validate();

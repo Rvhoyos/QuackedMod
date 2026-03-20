@@ -37,9 +37,7 @@ public class DuckEggEntity extends ThrowableItemProjectile {
         super(mc.quackedducks.entities.QuackEntityTypes.DUCK_EGG_PROJECTILE, thrower, level, stack);
     }
 
-    /**
-     * Returns the item this projectile visually represents .
-     */
+    /** Returns the item this projectile visually represents. */
     @Override
     protected net.minecraft.world.item.Item getDefaultItem() {
         return mc.quackedducks.items.QuackyModItems.duckEggSupplier().get().asItem();
@@ -65,8 +63,9 @@ public class DuckEggEntity extends ThrowableItemProjectile {
         }
     }
 
-    /*
-     * Handle entity hit specifically (not block hit).
+    /**
+     * Deals 2 damage to any entity directly struck by the egg (server-side only).
+     * Block hits are handled by {@link #onHit(HitResult)} via the hatch logic.
      */
     @Override
     protected void onHitEntity(net.minecraft.world.phys.EntityHitResult hit) {

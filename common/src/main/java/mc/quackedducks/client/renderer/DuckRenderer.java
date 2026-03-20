@@ -51,9 +51,6 @@ public class DuckRenderer<R extends LivingEntityRenderState & GeoRenderState> ex
         final float scaleX = renderState.isBaby ? baseScaleX * 0.5f : baseScaleX;
         final float scaleY = renderState.isBaby ? baseScaleY * 0.5f : baseScaleY;
 
-        if (renderState.ageInTicks % 40 == 0) { // Log window removed
-        }
-
         super.scaleModelForRender(
                 renderPassInfo,
                 widthScale * scaleX,
