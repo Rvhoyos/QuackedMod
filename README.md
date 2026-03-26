@@ -8,7 +8,7 @@
 
 ---
 
-# QuackedDucks 2.0
+# Ducky Quack Pack 2.0
 
 A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI, natural spawns, custom sounds, taming, and craftable items. Supports Fabric and NeoForge. Powered by GeckoLib 5.4.5.
 
@@ -146,6 +146,12 @@ cd QuackedMod
 ./gradlew :fabric:clean :fabric:build
 ./gradlew :neoforge:clean :neoforge:build
 ```
+
+---
+
+## Credits
+
+Model assets and animations are thanks to callout662.
 
 ---
 

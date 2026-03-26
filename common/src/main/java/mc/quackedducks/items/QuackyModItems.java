@@ -23,8 +23,7 @@ import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 /**
  * Central item registry for the mod.
  *
- * Uses vanilla {@link Registry#register} instead of Architectury's
- * DeferredRegister.
+ * Uses vanilla {@link Registry#register}.
  * Creative tab additions are handled per-platform in the entrypoints.
  */
 public class QuackyModItems {

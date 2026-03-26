@@ -1,7 +1,10 @@
 # Credits
 
-**Author**  
-- Code & original assets: rvhoyos
+**Author**
+- Code: rvhoyos
+
+**Assets**
+- Model, textures & animations: callout662
 
 **Libraries**  
 - GeckoLib — MIT — https://github.com/bernie-g/geckolib  

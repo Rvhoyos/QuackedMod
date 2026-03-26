@@ -19,5 +19,5 @@ The copyright holder may designate additional official mirrors at any time.
 
 THE MOD IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
 
-Third-party libraries used at runtime (e.g., GeckoLib, Architectury API) remain under their own licenses.
+Third-party libraries used at runtime (e.g., GeckoLib) remain under their own licenses.
 See CREDITS.md
