@@ -13,7 +13,7 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerPlayer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -43,11 +43,11 @@ public final class QuackModFabric implements ModInitializer {
         });
 
         // Networking Payloads
-        PayloadTypeRegistry.playS2C().register(QuackNetwork.SYNC_CONFIG,
+        PayloadTypeRegistry.clientboundPlay().register(QuackNetwork.SYNC_CONFIG,
                 QuackNetwork.SyncConfigPayload.STREAM_CODEC);
-        PayloadTypeRegistry.playS2C().register(QuackNetwork.OPEN_CONFIG_GUI,
+        PayloadTypeRegistry.clientboundPlay().register(QuackNetwork.OPEN_CONFIG_GUI,
                 QuackNetwork.OpenConfigGuiPayload.STREAM_CODEC);
-        PayloadTypeRegistry.playC2S().register(QuackNetwork.UPDATE_CONFIG,
+        PayloadTypeRegistry.serverboundPlay().register(QuackNetwork.UPDATE_CONFIG,
                 QuackNetwork.UpdateConfigPayload.STREAM_CODEC);
 
         // Sync on join
@@ -119,7 +119,7 @@ public final class QuackModFabric implements ModInitializer {
                 config.spawning.maxGroupSize);
 
         // Creative tab additions
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FOOD_AND_DRINKS).register(entries -> {
+        CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FOOD_AND_DRINKS).register(entries -> {
             entries.accept(QuackyModItems.DUCK_EGG);
             entries.accept(QuackyModItems.EMPTY_FOIE_GRAS_BOWL);
             entries.accept(QuackyModItems.DUCK_MEAT);
@@ -127,15 +127,15 @@ public final class QuackModFabric implements ModInitializer {
             entries.accept(QuackyModItems.FOIE_GRAS);
         });
 
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.SPAWN_EGGS).register(entries -> {
+        CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.SPAWN_EGGS).register(entries -> {
             entries.accept(QuackyModItems.DUCK_SPAWN_EGG);
         });
 
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.INGREDIENTS).register(entries -> {
+        CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.INGREDIENTS).register(entries -> {
             entries.accept(QuackyModItems.DUCK_FEATHER);
         });
 
-        ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COMBAT).register(entries -> {
+        CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(entries -> {
             entries.accept(QuackyModItems.DUCK_FEATHER_ARROW);
         });
     }

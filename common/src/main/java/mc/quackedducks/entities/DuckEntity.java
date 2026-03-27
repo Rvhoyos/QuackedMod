@@ -24,11 +24,11 @@ import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.BreedGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.object.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
+import com.geckolib.animatable.GeoEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animation.AnimationController;
+import com.geckolib.animation.object.PlayState;
+import com.geckolib.animation.RawAnimation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
@@ -79,7 +79,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     private static final byte HINT_PANIC = 2;
 
     // --- GeckoLib animation cache & clips ---
-    private final AnimatableInstanceCache cache = software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
+    private final AnimatableInstanceCache cache = com.geckolib.util.GeckoLibUtil.createInstanceCache(this);
     private static final RawAnimation IDLE       = RawAnimation.begin().thenLoop("animation.duck.idle");
     private static final RawAnimation WALK       = RawAnimation.begin().thenLoop("animation.duck.walk");
     private static final RawAnimation PANIC_ANIM = RawAnimation.begin().thenLoop("animation.duck.panic");
@@ -243,7 +243,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      */
     @Override
     public void registerControllers(
-            software.bernie.geckolib.animatable.manager.AnimatableManager.ControllerRegistrar controllers) {
+            com.geckolib.animatable.manager.AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(
                 "main",
                 2,

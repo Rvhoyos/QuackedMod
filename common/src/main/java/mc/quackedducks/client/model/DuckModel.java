@@ -3,8 +3,8 @@ package mc.quackedducks.client.model;
 import mc.quackedducks.QuackMod;
 import mc.quackedducks.entities.DuckEntity;
 import net.minecraft.resources.Identifier;
-import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.renderer.base.GeoRenderState;
+import com.geckolib.model.GeoModel;
+import com.geckolib.renderer.base.GeoRenderState;
 
 /**
  * GeckoLib model binding for {@link DuckEntity}.

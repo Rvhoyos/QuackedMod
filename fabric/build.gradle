@@ -1,22 +1,18 @@
 // Fabric module
 plugins {
-    id 'net.fabricmc.fabric-loom-remap' version '1.15.4'
+    id 'net.fabricmc.fabric-loom' version '1.15.5'
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-    mappings loom.layered() {
-        officialMojangMappings()
-        parchment("org.parchmentmc.data:parchment-${rootProject.parchment_mc_version}:${rootProject.parchment_version}@zip")
-    }
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
 
     // Common module
     compileOnly project(':common')
 
     // GeckoLib Fabric
-    modImplementation "software.bernie.geckolib:geckolib-fabric-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
+    implementation "com.geckolib:geckolib-fabric-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
 }
 
 loom {

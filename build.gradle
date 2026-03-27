@@ -5,10 +5,6 @@ allprojects {
     version = rootProject.mod_version
 
     repositories {
-        maven {
-            name = 'ParchmentMC'
-            url = 'https://maven.parchmentmc.org'
-        }
         exclusiveContent {
             forRepository {
                 maven {
@@ -17,7 +13,7 @@ allprojects {
                 }
             }
             filter {
-                includeGroup('software.bernie.geckolib')
+                includeGroup('com.geckolib')
             }
         }
     }
@@ -33,13 +29,13 @@ subprojects {
 
         java {
             toolchain {
-                languageVersion = JavaLanguageVersion.of(21)
+                languageVersion = JavaLanguageVersion.of(25)
             }
             withSourcesJar()
         }
 
         tasks.withType(JavaCompile).configureEach {
-            it.options.release = 21
+            it.options.release = 25
         }
 
         // Include common sources in platform projects

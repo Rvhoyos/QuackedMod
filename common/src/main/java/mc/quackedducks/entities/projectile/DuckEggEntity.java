@@ -114,7 +114,7 @@ public class DuckEggEntity extends ThrowableItemProjectile {
             for (int i = 0; i < 8; ++i) {
                 this.level().addParticle(
                         new net.minecraft.core.particles.ItemParticleOption(
-                                net.minecraft.core.particles.ParticleTypes.ITEM, stack),
+                                net.minecraft.core.particles.ParticleTypes.ITEM, stack.getItem()),
                         this.getX(), this.getY(), this.getZ(),
                         (this.getRandom().nextDouble() - 0.5D) * 0.08D,
                         (this.getRandom().nextDouble() - 0.5D) * 0.08D,

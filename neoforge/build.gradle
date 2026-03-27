@@ -1,13 +1,10 @@
 // NeoForge module
 plugins {
-    id 'net.neoforged.moddev' version '2.0.140'
+    id 'net.neoforged.moddev' version '2.0.141'
 }
 
 neoForge {
     version = rootProject.neoforge_version
-
-    parchment.minecraftVersion = rootProject.parchment_mc_version
-    parchment.mappingsVersion = rootProject.parchment_version
 
     runs {
         client {
@@ -32,7 +29,7 @@ dependencies {
     compileOnly project(':common')
 
     // GeckoLib NeoForge
-    implementation "software.bernie.geckolib:geckolib-neoforge-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
+    implementation "com.geckolib:geckolib-neoforge-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
 }
 
 processResources {
