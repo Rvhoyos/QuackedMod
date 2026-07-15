@@ -24,7 +24,6 @@ import mc.quackedducks.sound.QuackedSounds;
  */
 public final class QuackMod {
     public static final String MOD_ID = "quack";
-    public static final String BUILD = "2.1.0";
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
     /**
