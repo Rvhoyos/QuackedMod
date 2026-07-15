@@ -4,9 +4,7 @@ import mc.quackedducks.QuackMod;
 import mc.quackedducks.entities.projectile.DuckEggEntity;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import mc.quackedducks.config.QuackConfig;
@@ -30,27 +28,23 @@ public class QuackEntityTypes {
         public static void init() {
                 DUCK_EGG_PROJECTILE = Registry.register(
                                 BuiltInRegistries.ENTITY_TYPE,
-                                Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, "duck_egg_projectile"),
+                                ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, "duck_egg_projectile"),
                                 EntityType.Builder.<DuckEggEntity>of(
                                                 DuckEggEntity::new, MobCategory.MISC)
                                                 .sized(0.25f, 0.50f)
                                                 .clientTrackingRange(64)
                                                 .updateInterval(10)
-                                                .build(ResourceKey.create(Registries.ENTITY_TYPE,
-                                                                Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
-                                                                                "duck_egg_projectile"))));
+                                                .build("duck_egg_projectile"));
 
                 DUCK = Registry.register(
                                 BuiltInRegistries.ENTITY_TYPE,
-                                Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, "duck"),
+                                ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, "duck"),
                                 EntityType.Builder.of(DuckEntity::new, MobCategory.CREATURE)
                                                 .sized(QuackConfig.get().genericDucks.duckWidth,
                                                                 QuackConfig.get().genericDucks.duckHeight)
                                                 .eyeHeight(QuackConfig.get().genericDucks.duckHeight)
                                                 .passengerAttachments(1.36875f)
                                                 .clientTrackingRange(10)
-                                                .build(ResourceKey.create(Registries.ENTITY_TYPE,
-                                                                Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
-                                                                                "duck"))));
+                                                .build("duck"));
         }
 }

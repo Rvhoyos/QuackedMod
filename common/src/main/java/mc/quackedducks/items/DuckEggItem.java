@@ -1,8 +1,9 @@
 package mc.quackedducks.items;
 
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.InteractionHand;
 
@@ -18,8 +19,8 @@ import net.minecraft.world.InteractionHand;
  * and launches it from the player's rotation (speed 1.5f, inaccuracy 1.0f).
  * - Consumes one egg unless the player has {@code instabuild} abilities (e.g.,
  * creative).
- * - Returns {@link InteractionResult#SUCCESS} on the client and
- * {@link InteractionResult#CONSUME} on the server.
+ * - Returns {@link InteractionResultHolder#sidedSuccess} (SUCCESS on the
+ * client, CONSUME on the server).
  *
  * Rendering and hatch behavior are handled by the projectile entity.
  */
@@ -35,11 +36,11 @@ public class DuckEggItem extends Item {
      * @param level  world context
      * @param player using player
      * @param hand   hand used
-     * @return client: {@link InteractionResult#SUCCESS}, server:
-     *         {@link InteractionResult#CONSUME}
+     * @return {@link InteractionResultHolder#sidedSuccess} with the (possibly
+     *         shrunk) stack — SUCCESS on the client, CONSUME on the server
      */
     @Override
-    public InteractionResult use(
+    public InteractionResultHolder<ItemStack> use(
             Level level,
             Player player,
             InteractionHand hand) {
@@ -63,7 +64,7 @@ public class DuckEggItem extends Item {
         // Consume one egg unless in creative / instabuild
         if (!player.getAbilities().instabuild)
             stack.shrink(1);
-        return level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 
     }
 }

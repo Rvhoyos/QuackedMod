@@ -3,11 +3,9 @@ package mc.quackedducks.command;
 import com.mojang.brigadier.CommandDispatcher;
 import mc.quackedducks.QuackMod;
 import mc.quackedducks.config.QuackConfig;
-import net.minecraft.resources.Identifier;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.permissions.Permissions;
 
 /** Registers the {@code /quack} command tree (requires gamemaster permission). */
 public class QuackCommands {
@@ -18,7 +16,7 @@ public class QuackCommands {
      */
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("quack")
-                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("reload")
                         .executes(context -> {
                             QuackConfig.load();

@@ -1,6 +1,6 @@
 package mc.quackedducks.entities.projectile;
 
-import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile;
+import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.server.level.ServerLevel;
@@ -34,7 +34,8 @@ public class DuckEggEntity extends ThrowableItemProjectile {
     }
 
     public DuckEggEntity(Level level, LivingEntity thrower, net.minecraft.world.item.ItemStack stack) {
-        super(mc.quackedducks.entities.QuackEntityTypes.DUCK_EGG_PROJECTILE, thrower, level, stack);
+        super(mc.quackedducks.entities.QuackEntityTypes.DUCK_EGG_PROJECTILE, thrower, level);
+        this.setItem(stack);
     }
 
     /** Returns the item this projectile visually represents. */
@@ -114,7 +115,7 @@ public class DuckEggEntity extends ThrowableItemProjectile {
             for (int i = 0; i < 8; ++i) {
                 this.level().addParticle(
                         new net.minecraft.core.particles.ItemParticleOption(
-                                net.minecraft.core.particles.ParticleTypes.ITEM, stack.getItem()),
+                                net.minecraft.core.particles.ParticleTypes.ITEM, stack),
                         this.getX(), this.getY(), this.getZ(),
                         (this.getRandom().nextDouble() - 0.5D) * 0.08D,
                         (this.getRandom().nextDouble() - 0.5D) * 0.08D,

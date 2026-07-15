@@ -3,7 +3,7 @@ package mc.quackedducks.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import mc.quackedducks.QuackMod;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.File;
 import java.io.FileReader;
@@ -163,14 +163,14 @@ public class QuackConfig {
     }
 
     /**
-     * Returns the list of biome {@link Identifier}s where ducks spawn normally.
+     * Returns the list of biome {@link ResourceLocation}s where ducks spawn normally.
      * Invalid entries are skipped with a logged error.
      */
-    public static List<Identifier> getDuckBiomes() {
-        List<Identifier> list = new ArrayList<>();
+    public static List<ResourceLocation> getDuckBiomes() {
+        List<ResourceLocation> list = new ArrayList<>();
         for (String s : get().spawning.duckBiomes) {
             try {
-                list.add(Identifier.parse(s));
+                list.add(ResourceLocation.parse(s));
             } catch (Exception e) {
                 QuackMod.LOGGER.error("Invalid biome in config: " + s);
             }
@@ -179,14 +179,14 @@ public class QuackConfig {
     }
 
     /**
-     * Returns the list of wet biome {@link Identifier}s that receive bonus spawn weight.
+     * Returns the list of wet biome {@link ResourceLocation}s that receive bonus spawn weight.
      * Invalid entries are skipped with a logged error.
      */
-    public static List<Identifier> getWetBiomes() {
-        List<Identifier> list = new ArrayList<>();
+    public static List<ResourceLocation> getWetBiomes() {
+        List<ResourceLocation> list = new ArrayList<>();
         for (String s : get().spawning.wetBiomes) {
             try {
-                list.add(Identifier.parse(s));
+                list.add(ResourceLocation.parse(s));
             } catch (Exception e) {
                 QuackMod.LOGGER.error("Invalid wet biome in config: " + s);
             }

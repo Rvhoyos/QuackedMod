@@ -9,11 +9,8 @@ import mc.quackedducks.items.DuckEggItem;
 import mc.quackedducks.items.QuackyModItems;
 import mc.quackedducks.sound.QuackedSounds;
 
-import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -23,15 +20,12 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ArrowItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.SpawnEggItem;
-import net.minecraft.world.item.component.Consumable;
-import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
-import net.minecraft.world.item.component.TypedEntityData;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.component.CustomData;
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.network.QuackNetwork;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.common.DeferredSpawnEggItem;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -79,10 +73,7 @@ public final class QuackModNeoForge {
                                                         .sized(0.25f, 0.50f)
                                                         .clientTrackingRange(64)
                                                         .updateInterval(10)
-                                                        .build(ResourceKey.create(Registries.ENTITY_TYPE,
-                                                                        Identifier.fromNamespaceAndPath(
-                                                                                        QuackMod.MOD_ID,
-                                                                                        "duck_egg_projectile"))));
+                                                        .build("duck_egg_projectile"));
 
         public static final DeferredHolder<EntityType<?>, EntityType<DuckEntity>> DUCK = ENTITIES.register("duck",
                         () -> EntityType.Builder.of(DuckEntity::new, MobCategory.CREATURE)
@@ -90,27 +81,25 @@ public final class QuackModNeoForge {
                                         .eyeHeight(0.95f)
                                         .passengerAttachments(1.36875f)
                                         .clientTrackingRange(10)
-                                        .build(ResourceKey.create(Registries.ENTITY_TYPE,
-                                                        Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
-                                                                        "duck"))));
+                                        .build("duck"));
 
         // --- Sounds ---
         public static final DeferredHolder<SoundEvent, SoundEvent> DUCK_AMBIENT_SOUND = SOUNDS
                         .register("entity.duck.ambient", () -> {
-                                Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
+                                ResourceLocation id = ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                 "entity.duck.ambient");
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
         public static final DeferredHolder<SoundEvent, SoundEvent> DUCK_HURT_SOUND = SOUNDS.register("entity.duck.hurt",
                         () -> {
-                                Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
+                                ResourceLocation id = ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                 "entity.duck.hurt");
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
         public static final DeferredHolder<SoundEvent, SoundEvent> DUCK_DEATH_SOUND = SOUNDS.register(
                         "entity.duck.death",
                         () -> {
-                                Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
+                                ResourceLocation id = ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                 "entity.duck.death");
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
@@ -125,11 +114,10 @@ public final class QuackModNeoForge {
                         QuackyModItems.baseProperties("duck_egg").stacksTo(64)));
 
         public static final DeferredHolder<Item, Item> DUCK_SPAWN_EGG_ITEM = ITEMS.register("duck_spawn_egg",
-                        () -> new SpawnEggItem(
-                                        QuackyModItems.baseProperties("duck_spawn_egg")
-                                                        .component(DataComponents.ENTITY_DATA,
-                                                                        TypedEntityData.of((EntityType<?>) DUCK.get(),
-                                                                                        new CompoundTag()))));
+                        // DeferredSpawnEggItem takes the holder as a Supplier — safe before
+                        // entity registration resolves (mallard brown/green egg colors).
+                        () -> new DeferredSpawnEggItem(DUCK, 0x9C7A4B, 0x1E5E3A,
+                                        QuackyModItems.baseProperties("duck_spawn_egg")));
 
         public static final DeferredHolder<Item, Item> EMPTY_FOIE_GRAS_BOWL_ITEM = ITEMS.register(
                         "empty_foie_gras_bowl",
@@ -141,15 +129,10 @@ public final class QuackModNeoForge {
                                         .food(new FoodProperties.Builder()
                                                         .nutrition(2)
                                                         .saturationModifier(0.3f)
+                                                        .effect(new MobEffectInstance(
+                                                                        MobEffects.HUNGER, 20 * 60, 0),
+                                                                        0.90f)
                                                         .build())
-                                        .component(DataComponents.CONSUMABLE,
-                                                        Consumable.builder()
-                                                                        .onConsume(new ApplyStatusEffectsConsumeEffect(
-                                                                                        new MobEffectInstance(
-                                                                                                        MobEffects.HUNGER,
-                                                                                                        20 * 60, 0),
-                                                                                        0.90f))
-                                                                        .build())
                                         .stacksTo(64)));
 
         public static final DeferredHolder<Item, Item> DUCK_FEATHER_ITEM = ITEMS.register("duck_feather",
@@ -173,26 +156,17 @@ public final class QuackModNeoForge {
                                         .food(new FoodProperties.Builder()
                                                         .nutrition(8)
                                                         .saturationModifier(0.8f)
+                                                        .effect(new MobEffectInstance(
+                                                                        MobEffects.REGENERATION, 200, 1),
+                                                                        1.0f)
+                                                        .effect(new MobEffectInstance(
+                                                                        MobEffects.ABSORPTION, 20 * 60, 0),
+                                                                        1.0f)
+                                                        .effect(new MobEffectInstance(
+                                                                        MobEffects.SATURATION, 20, 0),
+                                                                        1.0f)
+                                                        .usingConvertsTo(EMPTY_FOIE_GRAS_BOWL_ITEM.get())
                                                         .build())
-                                        .usingConvertsTo(EMPTY_FOIE_GRAS_BOWL_ITEM.get())
-                                        .component(DataComponents.CONSUMABLE,
-                                                        Consumable.builder()
-                                                                        .onConsume(new ApplyStatusEffectsConsumeEffect(
-                                                                                        new MobEffectInstance(
-                                                                                                        MobEffects.REGENERATION,
-                                                                                                        200, 1),
-                                                                                        1.0f))
-                                                                        .onConsume(new ApplyStatusEffectsConsumeEffect(
-                                                                                        new MobEffectInstance(
-                                                                                                        MobEffects.ABSORPTION,
-                                                                                                        20 * 60, 0),
-                                                                                        1.0f))
-                                                                        .onConsume(new ApplyStatusEffectsConsumeEffect(
-                                                                                        new MobEffectInstance(
-                                                                                                        MobEffects.SATURATION,
-                                                                                                        20, 0),
-                                                                                        1.0f))
-                                                                        .build())
                                         .stacksTo(64)));
 
         // --- Constructor ---
@@ -218,7 +192,7 @@ public final class QuackModNeoForge {
 
                 // GUI Opener Hook
                 QuackMod.CONFIG_OPENER = (player) -> {
-                        player.connection.send(new QuackNetwork.OpenConfigGuiPayload());
+                        PacketDistributor.sendToPlayer(player, new QuackNetwork.OpenConfigGuiPayload());
                 };
         }
 
@@ -229,7 +203,7 @@ public final class QuackModNeoForge {
         private void onPlayerLoggedIn(
                         net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
                 if (event.getEntity() instanceof ServerPlayer player) {
-                        player.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
+                        PacketDistributor.sendToPlayer(player, QuackNetwork.SyncConfigPayload.fromCurrent());
                 }
         }
 
@@ -281,8 +255,9 @@ public final class QuackModNeoForge {
                                                 if (context.player() instanceof ServerPlayer serverPlayer) {
                                                         var server = serverPlayer.level().getServer();
                                                         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                                                                p.connection.send(QuackNetwork.SyncConfigPayload
-                                                                                .fromCurrent());
+                                                                PacketDistributor.sendToPlayer(p,
+                                                                                QuackNetwork.SyncConfigPayload
+                                                                                                .fromCurrent());
                                                         }
                                                         for (var level : server.getAllLevels()) {
                                                                 for (var duck : level.getEntities(QuackEntityTypes.DUCK,
@@ -338,24 +313,28 @@ public final class QuackModNeoForge {
                 }
         }
 
-        @EventBusSubscriber(modid = QuackMod.MOD_ID, value = Dist.CLIENT)
+        // bus = MOD is required on NeoForge 21.1 (FML 4.x): there is no automatic bus
+        // routing and the default is the GAME bus, where these mod-bus events never fire.
+        @EventBusSubscriber(modid = QuackMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
         public static final class ClientModEvents {
+                @SubscribeEvent
+                public static void onRegisterRenderers(final EntityRenderersEvent.RegisterRenderers event) {
+                        event.registerEntityRenderer(
+                                        DUCK.get(),
+                                        DuckRenderer::new);
+
+                        event.registerEntityRenderer(
+                                        DUCK_EGG_PROJECTILE.get(),
+                                        ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<mc.quackedducks.entities.projectile.DuckEggEntity>(
+                                                        ctx, 1.0f, false));
+                }
+
                 @SubscribeEvent
                 public static void onClientSetup(final FMLClientSetupEvent event) {
                         event.enqueueWork(() -> {
-                                EntityRenderers.register(
-                                                DUCK.get(),
-                                                DuckRenderer::new);
-
-                                EntityRenderers.register(
-                                                DUCK_EGG_PROJECTILE.get(),
-                                                ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<mc.quackedducks.entities.projectile.DuckEggEntity>(
-                                                                ctx, 1.0f, false));
-
                                 // Hooks
                                 QuackMod.PACKET_SENDER = (payload) -> {
-                                        net.neoforged.neoforge.client.network.ClientPacketDistributor
-                                                        .sendToServer(payload);
+                                        PacketDistributor.sendToServer(payload);
                                 };
                         });
                 }

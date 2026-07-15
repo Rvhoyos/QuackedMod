@@ -30,21 +30,23 @@ public class ConfigBiomeModifier implements BiomeModifier {
     public void modify(Holder<Biome> biome, Phase phase, ModifiableBiomeInfo.BiomeInfo.Builder builder) {
         if (phase == Phase.ADD) {
             var config = QuackConfig.get();
-            var id = biome.unwrapKey().get().identifier();
+            var id = biome.unwrapKey().get().location();
 
             // Generic biomes
             if (QuackConfig.getDuckBiomes().contains(id)) {
                 builder.getMobSpawnSettings().addSpawn(MobCategory.CREATURE,
-                        config.spawning.baseWeight,
-                        new MobSpawnSettings.SpawnerData(QuackEntityTypes.DUCK, config.spawning.minGroupSize,
+                        new MobSpawnSettings.SpawnerData(QuackEntityTypes.DUCK,
+                                config.spawning.baseWeight,
+                                config.spawning.minGroupSize,
                                 config.spawning.maxGroupSize));
             }
 
             // Wet biomes (bonus weight)
             if (QuackConfig.getWetBiomes().contains(id)) {
                 builder.getMobSpawnSettings().addSpawn(MobCategory.CREATURE,
-                        config.spawning.wetBiomeBonusWeight,
-                        new MobSpawnSettings.SpawnerData(QuackEntityTypes.DUCK, config.spawning.minGroupSize,
+                        new MobSpawnSettings.SpawnerData(QuackEntityTypes.DUCK,
+                                config.spawning.wetBiomeBonusWeight,
+                                config.spawning.minGroupSize,
                                 config.spawning.maxGroupSize));
             }
         }

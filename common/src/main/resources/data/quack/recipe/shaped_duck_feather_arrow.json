@@ -6,9 +6,9 @@
         " S "
     ],
     "key": {
-        "P": "minecraft:flint",
-        "F": "quack:duck_feather",
-        "S": "minecraft:stick"
+        "P": { "item": "minecraft:flint" },
+        "F": { "item": "quack:duck_feather" },
+        "S": { "item": "minecraft:stick" }
     },
     "result": {"id": "quack:duck_feather_arrow", "count": 4}
 }

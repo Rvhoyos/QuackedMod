@@ -6,16 +6,14 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.bee.Bee;
-import net.minecraft.world.entity.animal.polarbear.PolarBear;
-import net.minecraft.world.entity.animal.wolf.Wolf;
+import net.minecraft.world.entity.animal.Bee;
+import net.minecraft.world.entity.animal.PolarBear;
+import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
@@ -24,11 +22,11 @@ import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.BreedGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import com.geckolib.animatable.GeoEntity;
-import com.geckolib.animatable.instance.AnimatableInstanceCache;
-import com.geckolib.animation.AnimationController;
-import com.geckolib.animation.object.PlayState;
-import com.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
@@ -37,7 +35,7 @@ import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -79,7 +77,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     private static final byte HINT_PANIC = 2;
 
     // --- GeckoLib animation cache & clips ---
-    private final AnimatableInstanceCache cache = com.geckolib.util.GeckoLibUtil.createInstanceCache(this);
+    private final AnimatableInstanceCache cache = software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
     private static final RawAnimation IDLE       = RawAnimation.begin().thenLoop("animation.duck.idle");
     private static final RawAnimation WALK       = RawAnimation.begin().thenLoop("animation.duck.walk");
     private static final RawAnimation PANIC_ANIM = RawAnimation.begin().thenLoop("animation.duck.panic");
@@ -110,7 +108,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
 
     // --- Movement tuning ---
     /** +25% movement speed on the head duck's MOVEMENT_SPEED attribute. Transient — not saved. */
-    private static final Identifier LEADER_SPEED_ID = Identifier.fromNamespaceAndPath("quack", "leader_speed");
+    private static final ResourceLocation LEADER_SPEED_ID = ResourceLocation.fromNamespaceAndPath("quack", "leader_speed");
     private static final AttributeModifier LEADER_SPEED_MODIFIER =
             new AttributeModifier(LEADER_SPEED_ID, 0.25, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
@@ -143,9 +141,9 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      * Returns {@link GroundPathNavigation} as the default; {@link FlyingPathNavigation}
      * is only active while {@link #inFlyingMode} is true.
      *
-     * <p>Note: {@code setRequiredPathLength} is intentionally omitted. Ducks migrate
-     * 80–140 blocks and that call (borrowed from Bee) would cap/constrain path length
-     * in ways that break long-distance aerial navigation.
+     * <p>Note: 1.21.1 has no {@code setRequiredPathLength}. Long-distance (80–140 block)
+     * migration pathing instead relies on the FOLLOW_RANGE base attribute (160 — see
+     * {@link #createAttributes()}), which sizes the pathfinder's node budget and region.
      */
     @Override
     protected PathNavigation createNavigation(Level level) {
@@ -168,9 +166,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      */
     @Override
     public @Nullable AgeableMob getBreedOffspring(ServerLevel level, AgeableMob partner) {
-        return mc.quackedducks.entities.QuackEntityTypes.DUCK.create(
-                level,
-                net.minecraft.world.entity.EntitySpawnReason.BREEDING);
+        return mc.quackedducks.entities.QuackEntityTypes.DUCK.create(level);
     }
 
     /** @return true when all available follower slot(s) are filled. Leaders require both slots filled. */
@@ -243,8 +239,9 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
      */
     @Override
     public void registerControllers(
-            com.geckolib.animatable.manager.AnimatableManager.ControllerRegistrar controllers) {
+            software.bernie.geckolib.animation.AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(
+                this,
                 "main",
                 2,
                 state -> {
@@ -293,7 +290,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                     if (idleVariantCooldown <= 0) {
                         final int dabN = mc.quackedducks.config.QuackConfig.get().genericDucks.dabChance;
                         if (this.random.nextInt(dabN) == 0) {
-                            state.controller().reset();
+                            state.getController().forceAnimationReset();
                             currentOneShot = DAB;
                             oneShotLockTicks = 45; // 1.75 s * 20 tps + 10 tick buffer
                             state.setAndContinue(DAB);
@@ -474,27 +471,17 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                 dbg("tamed by {}", player.getName().getString());
                 level().broadcastEntityEvent(this, (byte) 7); // hearts
             }
-            return client ? InteractionResult.SUCCESS
-                    : InteractionResult.SUCCESS_SERVER;
+            return InteractionResult.sidedSuccess(client);
         }
 
         return super.mobInteract(player, hand);
     }
 
-    @Override
-    protected void addAdditionalSaveData(ValueOutput out) {
-        super.addAdditionalSaveData(out);
-    }
-
-    @Override
-    protected void readAdditionalSaveData(ValueInput in) {
-        super.readAdditionalSaveData(in);
-    }
-
     /**
      * Base attributes for ducks.
-     * - Light health, slow-ish on land, good at water movement, decent follow/tempt
-     * ranges.
+     * - Light health, slow-ish on land, good at water movement.
+     * - Tempt range is fixed at 10 blocks by 1.21.1's TemptGoal (no TEMPT_RANGE attribute).
+     * - FOLLOW_RANGE is a pathfinding budget here, not a targeting range (see below).
      */
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createLivingAttributes()
@@ -505,8 +492,11 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                                                                                                                      // walker
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0D) // good swimmer
                 .add(Attributes.FLYING_SPEED, 0.9D)
-                .add(Attributes.TEMPT_RANGE, 16.0D) // how far it notices food/player
-                .add(Attributes.FOLLOW_RANGE, 12.0D); // how far it notices food/player
+                // TEMPT_RANGE attribute does not exist in 1.21.1 — TemptGoal range is hardcoded to 10 blocks.
+                // FOLLOW_RANGE sizes the pathfinder's node budget (×16 at nav construction) and its
+                // per-createPath region. 160 covers 80–140 block MIGRATE targets; ducks have no
+                // target-acquisition goals, so no other AI reads this attribute.
+                .add(Attributes.FOLLOW_RANGE, 160.0D);
     }
 
     @Override

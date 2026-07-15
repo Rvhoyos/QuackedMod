@@ -605,11 +605,10 @@ public class DuckBrainGoal extends Goal {
             }
             case MIGRATE -> {
                 if (migrateTarget != null) {
-                    // Default FOLLOW_RANGE (~16 blocks) gives a ±24-block PathNavigationRegion —
-                    // far too small for 80–140 block migration targets. Expand the required path
-                    // length to cover the full distance before calling moveTo.
+                    // 1.21.1 has no setRequiredPathLength; long-range pathing is covered by the
+                    // duck's FOLLOW_RANGE base attribute (160 — see DuckEntity.createAttributes),
+                    // which sizes both the pathfinder node budget and the per-createPath region.
                     double dist = duck.position().distanceTo(migrateTarget);
-                    duck.getNavigation().setRequiredPathLength((float) dist + 16.0f);
                     duck.getNavigation().moveTo(
                             migrateTarget.x, migrateTarget.y, migrateTarget.z, MIGRATE_SPEED);
                     LOG.info("[BRAIN id={}] MIGRATE nav to ({},{},{}) dist={} navDone={}",

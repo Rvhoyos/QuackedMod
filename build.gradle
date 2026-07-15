@@ -13,8 +13,12 @@ allprojects {
                 }
             }
             filter {
-                includeGroup('com.geckolib')
+                includeGroup('software.bernie.geckolib')
             }
+        }
+        maven {
+            name = 'ParchmentMC'
+            url = 'https://maven.parchmentmc.org'
         }
     }
 }
@@ -29,13 +33,13 @@ subprojects {
 
         java {
             toolchain {
-                languageVersion = JavaLanguageVersion.of(25)
+                languageVersion = JavaLanguageVersion.of(21)
             }
             withSourcesJar()
         }
 
         tasks.withType(JavaCompile).configureEach {
-            it.options.release = 25
+            it.options.release = 21
         }
 
         // Include common sources in platform projects

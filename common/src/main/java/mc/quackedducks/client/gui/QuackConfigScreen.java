@@ -2,7 +2,7 @@ package mc.quackedducks.client.gui;
 
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.network.QuackNetwork;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -88,17 +88,20 @@ public class QuackConfigScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
-        // Draw dark gradient background for premium feel
-        this.extractTransparentBackground(extractor);
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         // Title
-        extractor.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
 
         // Category Label
-        extractor.centeredText(this.font, Component.literal("Entity Parameters"), this.width / 2, 38, 0xAAAAAA);
+        guiGraphics.drawCenteredString(this.font, Component.literal("Entity Parameters"), this.width / 2, 38, 0xAAAAAA);
+    }
 
-        super.extractRenderState(extractor, mouseX, mouseY, partialTick);
+    /** Keep the plain dark gradient instead of 1.21.1's default blur + menu background. */
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderTransparentBackground(guiGraphics);
     }
 
     /** Returns {@code false} so the game keeps running while the GUI is open. */

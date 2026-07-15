@@ -3,22 +3,14 @@ package mc.quackedducks.items;
 import mc.quackedducks.QuackMod;
 import mc.quackedducks.entities.QuackEntityTypes;
 import net.minecraft.core.Registry;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ArrowItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
-import net.minecraft.world.item.component.Consumable;
-import net.minecraft.world.item.component.TypedEntityData;
-import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 
 /**
  * Central item registry for the mod.
@@ -51,12 +43,11 @@ public class QuackyModItems {
                                                                 .saturationModifier(0.3f)
                                                                 .build())));
 
+                // 1.21.1 spawn eggs take the entity type + egg colors directly (mallard brown/green).
+                // Safe here: QuackMod.init() registers entity types before items.
                 DUCK_SPAWN_EGG = registerItem("duck_spawn_egg", new SpawnEggItem(
-                                baseProperties("duck_spawn_egg")
-                                                .component(DataComponents.ENTITY_DATA,
-                                                                TypedEntityData.of(
-                                                                                (EntityType<?>) QuackEntityTypes.DUCK,
-                                                                                new CompoundTag()))));
+                                QuackEntityTypes.DUCK, 0x9C7A4B, 0x1E5E3A,
+                                baseProperties("duck_spawn_egg")));
 
                 EMPTY_FOIE_GRAS_BOWL = registerItem("empty_foie_gras_bowl", new Item(
                                 baseProperties("empty_foie_gras_bowl")));
@@ -83,15 +74,10 @@ public class QuackyModItems {
                                                 .food(new FoodProperties.Builder()
                                                                 .nutrition(4)
                                                                 .saturationModifier(0.4f)
+                                                                .effect(new MobEffectInstance(
+                                                                                MobEffects.REGENERATION, 100, 1),
+                                                                                1.0f)
                                                                 .build())
-                                                .component(DataComponents.CONSUMABLE,
-                                                                Consumable.builder()
-                                                                                .onConsume(new ApplyStatusEffectsConsumeEffect(
-                                                                                                new MobEffectInstance(
-                                                                                                                MobEffects.REGENERATION,
-                                                                                                                100,
-                                                                                                                1)))
-                                                                                .build())
                                                 .stacksTo(64)));
 
                 // TODO:
@@ -115,17 +101,16 @@ public class QuackyModItems {
         private static Item registerItem(String name, Item item) {
                 return Registry.register(
                                 BuiltInRegistries.ITEM,
-                                Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, name),
+                                ResourceLocation.fromNamespaceAndPath(QuackMod.MOD_ID, name),
                                 item);
         }
 
         /**
-         * Creates a base {@link Item.Properties} with the mod-namespaced resource key
-         * for the given item name. Used by both Fabric and NeoForge registrations.
+         * Creates a base {@link Item.Properties} for the given item name.
+         * (1.21.1 items don't carry their id in Properties — no setId equivalent.)
+         * Used by both Fabric and NeoForge registrations.
          */
         public static Item.Properties baseProperties(String name) {
-                return new Item.Properties().setId(
-                                ResourceKey.create(Registries.ITEM,
-                                                Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, name)));
+                return new Item.Properties();
         }
 }

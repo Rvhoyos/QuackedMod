@@ -5,11 +5,14 @@ plugins {
 
 neoForge {
     neoFormVersion = rootProject.neoform_version
+
+    parchment.minecraftVersion = "1.21.1"
+    parchment.mappingsVersion = "2024.11.17"
 }
 
 dependencies {
     // GeckoLib common
-    implementation "com.geckolib:geckolib-common-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
+    implementation "software.bernie.geckolib:geckolib-common-${rootProject.minecraft_version}:${rootProject.geckolib_version}"
 
     // Mixin for common compilation
     compileOnly "org.spongepowered:mixin:0.8.5"

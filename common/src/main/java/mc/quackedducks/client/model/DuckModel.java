@@ -2,9 +2,8 @@ package mc.quackedducks.client.model;
 
 import mc.quackedducks.QuackMod;
 import mc.quackedducks.entities.DuckEntity;
-import net.minecraft.resources.Identifier;
-import com.geckolib.model.GeoModel;
-import com.geckolib.renderer.base.GeoRenderState;
+import net.minecraft.resources.ResourceLocation;
+import software.bernie.geckolib.model.GeoModel;
 
 /**
  * GeckoLib model binding for {@link DuckEntity}.
@@ -15,25 +14,25 @@ import com.geckolib.renderer.base.GeoRenderState;
 public class DuckModel extends GeoModel<DuckEntity> {
     private static final String MODID = QuackMod.MOD_ID;
 
-    private static final Identifier MODEL = Identifier.fromNamespaceAndPath(MODID, "entity/duck");
-    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(MODID, "textures/entity/duck.png");
-    private static final Identifier ANIMATIONS = Identifier.fromNamespaceAndPath(MODID, "entity/duck");
+    private static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath(MODID, "geo/entity/duck.geo.json");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(MODID, "textures/entity/duck.png");
+    private static final ResourceLocation ANIMATIONS = ResourceLocation.fromNamespaceAndPath(MODID, "animations/entity/duck.animation.json");
 
-    /** @return the baked model resource for the current render state */
+    /** @return the baked model resource for this entity */
     @Override
-    public Identifier getModelResource(GeoRenderState renderState) {
+    public ResourceLocation getModelResource(DuckEntity animatable) {
         return MODEL;
     }
 
     /** @return the texture used for this entity */
     @Override
-    public Identifier getTextureResource(GeoRenderState renderState) {
+    public ResourceLocation getTextureResource(DuckEntity animatable) {
         return TEXTURE;
     }
 
     /** @return the animation file used by GeckoLib for this entity */
     @Override
-    public Identifier getAnimationResource(DuckEntity animatable) {
+    public ResourceLocation getAnimationResource(DuckEntity animatable) {
         return ANIMATIONS;
     }
 }

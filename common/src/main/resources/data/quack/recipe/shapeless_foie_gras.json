@@ -1,8 +1,8 @@
 {
   "type": "minecraft:crafting_shapeless",
   "ingredients": [
-    "quack:empty_foie_gras_bowl",
-    "quack:cooked_duck"
+    { "item": "quack:empty_foie_gras_bowl" },
+    { "item": "quack:cooked_duck" }
   ],
   "result": { "id": "quack:foie_gras" }
 }

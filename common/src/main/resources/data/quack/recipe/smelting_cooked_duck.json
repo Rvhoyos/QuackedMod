@@ -1,6 +1,6 @@
 {
     "type": "minecraft:smelting",
-    "ingredient": "quack:duck_meat",
+    "ingredient": { "item": "quack:duck_meat" },
     "result": {
         "id": "quack:cooked_duck"
     },

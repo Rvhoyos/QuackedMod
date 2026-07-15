@@ -61,8 +61,7 @@ public class LayEggGoal extends Goal{
         // lay the egg
         self.playSound(SoundEvents.CHICKEN_EGG, 1.0F, 1.0F);
         if (!self.level().isClientSide()) {
-            net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) self.level();
-            self.spawnAtLocation(sl, eggItemSupplier.get()); // 1 item;
+            self.spawnAtLocation(eggItemSupplier.get()); // 1 item;
         }
         // Re-arm cooldown (inclusive range).
         cooldown = rng.nextInt((maxIntervalTicks - minIntervalTicks) + 1) + minIntervalTicks;
