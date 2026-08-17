@@ -24,7 +24,6 @@ import mc.quackedducks.sound.QuackedSounds;
  */
 public final class QuackMod {
     public static final String MOD_ID = "quack";
-    public static final String BUILD = "2.0.1";
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
     /**
@@ -71,5 +70,19 @@ public final class QuackMod {
     /** Sends an {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} to the server. */
     public static void sendConfigUpdate(mc.quackedducks.network.QuackNetwork.UpdateConfigPayload payload) {
         PACKET_SENDER.accept(payload);
+    }
+
+    /**
+     * Loader-injected handler that broadcasts the current config to every connected player as a
+     * {@link mc.quackedducks.network.QuackNetwork.SyncConfigPayload}. Sending a clientbound custom
+     * payload is loader-specific, so each loader back-fills this before any config update is served.
+     */
+    public static java.util.function.Consumer<net.minecraft.server.MinecraftServer> CONFIG_BROADCASTER = (s) -> {
+        LOGGER.warn("Config broadcaster not initialized!");
+    };
+
+    /** Broadcasts the live config to all players on {@code server} via {@link #CONFIG_BROADCASTER}. */
+    public static void broadcastConfigSync(net.minecraft.server.MinecraftServer server) {
+        CONFIG_BROADCASTER.accept(server);
     }
 }

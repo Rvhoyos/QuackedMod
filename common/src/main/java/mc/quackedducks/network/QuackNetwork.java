@@ -33,7 +33,7 @@ public class QuackNetwork {
      */
     public record SyncConfigPayload(float duckWidth, float duckHeight, double movementSpeed,
                                     int ambientSoundInterval, int migrationCooldownTicks, int dabChance)
-            implements CustomPacketPayload {
+            implements CustomPacketPayload, mc.quackedducks.config.ConfigFields {
         public static final StreamCodec<FriendlyByteBuf, SyncConfigPayload> STREAM_CODEC = StreamCodec
                 .composite(
                         ByteBufCodecs.FLOAT, SyncConfigPayload::duckWidth,
@@ -73,7 +73,7 @@ public class QuackNetwork {
      */
     public record UpdateConfigPayload(float duckWidth, float duckHeight, double movementSpeed,
                                       int ambientSoundInterval, int migrationCooldownTicks, int dabChance)
-            implements CustomPacketPayload {
+            implements CustomPacketPayload, mc.quackedducks.config.ConfigFields {
         public static final StreamCodec<FriendlyByteBuf, UpdateConfigPayload> STREAM_CODEC = StreamCodec
                 .composite(
                         ByteBufCodecs.FLOAT, UpdateConfigPayload::duckWidth,

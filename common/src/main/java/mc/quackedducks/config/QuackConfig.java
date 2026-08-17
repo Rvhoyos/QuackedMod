@@ -74,6 +74,21 @@ public class QuackConfig {
     }
 
     /**
+     * Copies the networked {@link ConfigFields} into {@link #genericDucks} and re-validates.
+     * The single source of truth for applying an incoming config payload (in either
+     * direction) — used by both loaders' client sync and server update handlers.
+     */
+    public void apply(ConfigFields src) {
+        genericDucks.duckWidth = src.duckWidth();
+        genericDucks.duckHeight = src.duckHeight();
+        genericDucks.movementSpeed = src.movementSpeed();
+        genericDucks.ambientSoundInterval = src.ambientSoundInterval();
+        genericDucks.migrationCooldownTicks = src.migrationCooldownTicks();
+        genericDucks.dabChance = src.dabChance();
+        validate();
+    }
+
+    /**
      * World-spawn configuration for duck entities.
      * Wet biomes receive {@code baseWeight + wetBiomeBonusWeight} total spawn weight.
      */

@@ -1,11 +1,11 @@
 package mc.quackedducks.fabric;
 
 import mc.quackedducks.QuackMod;
+import mc.quackedducks.QuackServerConfig;
 import mc.quackedducks.entities.DuckEntity;
 import mc.quackedducks.entities.QuackEntityTypes;
 import mc.quackedducks.items.QuackyModItems;
 import mc.quackedducks.command.QuackCommands;
-import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.network.QuackNetwork;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -60,31 +60,17 @@ public final class QuackModFabric implements ModInitializer {
             ServerPlayNetworking.send(player, new QuackNetwork.OpenConfigGuiPayload());
         };
 
-        // Update Handler
+        // Config broadcast hook — loader-specific send of the clientbound sync payload.
+        QuackMod.CONFIG_BROADCASTER = (server) -> {
+            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                ServerPlayNetworking.send(p, QuackNetwork.SyncConfigPayload.fromCurrent());
+            }
+        };
+
+        // Update Handler — transport + thread dispatch only; logic lives in common.
         ServerPlayNetworking.registerGlobalReceiver(QuackNetwork.UPDATE_CONFIG, (payload, context) -> {
-            context.server().execute(() -> {
-                var c = QuackConfig.get().genericDucks;
-                c.duckWidth = payload.duckWidth();
-                c.duckHeight = payload.duckHeight();
-                c.movementSpeed = payload.movementSpeed();
-                c.ambientSoundInterval = payload.ambientSoundInterval();
-                c.migrationCooldownTicks = payload.migrationCooldownTicks();
-                c.dabChance = payload.dabChance();
-                QuackConfig.get().validate();
-                QuackConfig.save();
-
-                // Sync to all
-                for (ServerPlayer p : context.server().getPlayerList().getPlayers()) {
-                    ServerPlayNetworking.send(p, QuackNetwork.SyncConfigPayload.fromCurrent());
-                }
-
-                // Update all existing ducks on server
-                for (var level : context.server().getAllLevels()) {
-                    for (var duck : level.getEntities(QuackEntityTypes.DUCK, e -> true)) {
-                        duck.updateFromConfig();
-                    }
-                }
-            });
+            context.server().execute(
+                    () -> QuackServerConfig.applyUpdateSaveAndBroadcast(payload, context.server()));
         });
 
         // Entity attributes

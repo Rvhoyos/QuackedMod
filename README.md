@@ -1,16 +1,18 @@
+![Ducks waddling in Minecraft](docs/waddle.gif)
+
 [![Release](https://img.shields.io/github/v/release/Rvhoyos/QuackedMod)](https://github.com/Rvhoyos/QuackedMod/releases)
 ![GitHub Downloads](https://img.shields.io/github/downloads/Rvhoyos/QuackedMod/total)
 [![CurseForge Downloads](https://img.shields.io/curseforge/dt/1345567?label=CurseForge%20downloads)](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/ducky-quack-pack?label=Modrinth%20downloads)](https://modrinth.com/mod/ducky-quack-pack)
 [![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey)](#license)
-![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11-informational)
+![Minecraft](https://img.shields.io/badge/Minecraft-26.2-informational)
 ![Loaders](https://img.shields.io/badge/Loaders-Fabric%20%7C%20NeoForge-informational)
 
 ---
 
 # Ducky Quack Pack 2.0
 
-A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI, natural spawns, custom sounds, taming, and craftable items. Supports Fabric and NeoForge. Powered by GeckoLib 5.4.5.
+A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI, natural spawns, custom sounds, taming, and craftable items. Supports Fabric and NeoForge. Powered by GeckoLib 5.5.3.
 
 > Find us on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack) or [Modrinth](https://modrinth.com/mod/ducky-quack-pack).
 
@@ -20,12 +22,12 @@ A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI,
 
 2.0 is a ground-up rewrite of the duck AI. The old goal-based system has been replaced with a single hierarchical state machine (`DuckBrainGoal`) that owns all locomotion decisions. This eliminates the race conditions and formation bugs that plagued 1.x.
 
-- **Flocking AI rewrite** — Ducks self-organise into leader/follower chains. The leader duck is marked with a particle crown. Followers track their leader on the ground and in the air.
-- **Migration** — Untamed leader ducks periodically fly 80–140 blocks to a new location. Their followers go with them.
-- **Graceful landing** — Ducks descend using flying navigation before switching to ground mode, preventing the sink-into-water bug from 1.x.
-- **Taming overhaul** — Tame the leader duck of a flock to lead the whole group. Tamed ducks follow their owner and are not afraid of predators.
-- **Animations** — Idle, walk, fly, panic, and a rare DAB animation via GeckoLib.
-- **Config system** — Real-time in-game configuration via `/quack config` (requires OP/cheats). All values are hot-applied without a restart.
+- **Flocking AI rewrite** - Ducks self-organise into leader/follower chains. The leader duck is marked with a particle crown. Followers track their leader on the ground and in the air.
+- **Migration** - Untamed leader ducks periodically fly 80–140 blocks to a new location. Their followers go with them.
+- **Graceful landing** - Ducks descend using flying navigation before switching to ground mode, preventing the sink-into-water bug from 1.x.
+- **Taming overhaul** - Tame the leader duck of a flock to lead the whole group. Tamed ducks follow their owner and are not afraid of predators.
+- **Animations** - Idle, walk, fly, panic, and a rare DAB animation via GeckoLib.
+- **Config system** - Real-time in-game configuration via `/quack config` (requires OP/cheats). All values are hot-applied without a restart.
 
 ---
 
@@ -39,9 +41,9 @@ A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI,
 - Baby ducks follow the nearest adult.
 
 ### Taming
-- Feed seeds to a duck to tame it. Only the **leader** duck of a flock needs to be tamed — the wild followers trail the tamed leader who follows you.
+- Feed seeds to a duck to tame it. Only the **leader** duck of a flock needs to be tamed - the wild followers trail the tamed leader who follows you.
 - Tamed ducks follow their owner when within 12 blocks and stop pursuing when the owner moves further than 20 blocks away.
-- Tamed ducks are **calm around predators** — they will not flee from wolves or monsters.
+- Tamed ducks are **calm around predators** - they will not flee from wolves or monsters.
 - Tamed ducks do not migrate.
 
 ### Spawning
@@ -88,12 +90,12 @@ Config is stored in `config/quack.json`. On version upgrades, existing values ar
 
 | | Version |
 |--|--|
-| Minecraft | 1.21.11 |
-| Fabric Loader | 0.17.2+ |
+| Minecraft | 26.2 |
+| Fabric Loader | 0.19.3+ |
 | Fabric API | Required |
-| NeoForge | 21.11.x |
-| GeckoLib | 5.4.5 (required, both loaders) |
-| Java | 21 |
+| NeoForge | 26.2.x |
+| GeckoLib | 5.5.3 (required, both loaders) |
+| Java | 25 |
 
 ---
 
@@ -103,31 +105,31 @@ Config is stored in `config/quack.json`. On version upgrades, existing values ar
 - [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
 - [Modrinth](https://modrinth.com/mod/ducky-quack-pack)
 
-### Manual — Fabric Client
-1. Install a Fabric profile for Minecraft 1.21.11.
+### Manual - Fabric Client
+1. Install a Fabric profile for Minecraft 26.2.
 2. Drop into `.minecraft/mods/`:
-   - `fabric-api (1.21.11).jar`
-   - `geckolib-fabric-5.4.5.jar`
-   - `quack-fabric-2.0.jar`
+   - `fabric-api (26.2).jar`
+   - `geckolib-fabric-5.5.3.jar`
+   - `quack-fabric-2.0.1.jar`
 
-### Manual — NeoForge Client
-1. Install NeoForge for 1.21.11.
+### Manual - NeoForge Client
+1. Install NeoForge for 26.2.
 2. Drop into `.minecraft/mods/`:
-   - `geckolib-neoforge-5.4.5.jar`
-   - `quack-neoforge-2.0.jar`
+   - `geckolib-neoforge-5.5.3.jar`
+   - `quack-neoforge-2.0.1.jar`
 
-### Manual — Dedicated Server
-1. Set up a Fabric or NeoForge server for 1.21.11.
+### Manual - Dedicated Server
+1. Set up a Fabric or NeoForge server for 26.2.
 2. Drop the appropriate jars (see above) into the server `mods/` folder.
 3. Start the server. Config generates at `config/quack.json`.
 
-> GeckoLib is available at [modrinth.com/mod/geckolib](https://modrinth.com/mod/geckolib/versions?g=1.21.11).
+> GeckoLib is available at [modrinth.com/mod/geckolib](https://modrinth.com/mod/geckolib/versions?g=26.2).
 
 ---
 
 ## Building from Source
 
-**Requirements:** JDK 21+, Git.
+**Requirements:** JDK 25+, Git.
 
 ```bash
 # Clone

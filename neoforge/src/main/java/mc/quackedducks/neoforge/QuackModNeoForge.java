@@ -1,6 +1,7 @@
 package mc.quackedducks.neoforge;
 
 import mc.quackedducks.QuackMod;
+import mc.quackedducks.QuackServerConfig;
 import mc.quackedducks.client.renderer.DuckRenderer;
 import mc.quackedducks.entities.DuckEntity;
 import mc.quackedducks.entities.QuackEntityTypes;
@@ -220,6 +221,13 @@ public final class QuackModNeoForge {
                 QuackMod.CONFIG_OPENER = (player) -> {
                         player.connection.send(new QuackNetwork.OpenConfigGuiPayload());
                 };
+
+                // Config broadcast hook — loader-specific send of the clientbound sync payload.
+                QuackMod.CONFIG_BROADCASTER = (server) -> {
+                        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                                p.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
+                        }
+                };
         }
 
         private void onRegisterCommands(RegisterCommandsEvent event) {
@@ -238,15 +246,9 @@ public final class QuackModNeoForge {
 
                 registrar.configurationToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
                                 (payload, context) -> {
-                                        // Configuration sync during config phase
-                                        var c = QuackConfig.get().genericDucks;
-                                        c.duckWidth = payload.duckWidth();
-                                        c.duckHeight = payload.duckHeight();
-                                        c.movementSpeed = payload.movementSpeed();
-                                        c.ambientSoundInterval = payload.ambientSoundInterval();
-                                        c.migrationCooldownTicks = payload.migrationCooldownTicks();
-                                        c.dabChance = payload.dabChance();
-                                        QuackConfig.get().validate();
+                                        // Configuration sync during config phase — apply only; no
+                                        // entities are loaded yet, so there is nothing to refresh.
+                                        QuackConfig.get().apply(payload);
                                 });
 
                 registrar.playToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
@@ -268,28 +270,9 @@ public final class QuackModNeoForge {
                 registrar.playToServer(QuackNetwork.UPDATE_CONFIG, QuackNetwork.UpdateConfigPayload.STREAM_CODEC,
                                 (payload, context) -> {
                                         context.enqueueWork(() -> {
-                                                var c = QuackConfig.get().genericDucks;
-                                                c.duckWidth = payload.duckWidth();
-                                                c.duckHeight = payload.duckHeight();
-                                                c.movementSpeed = payload.movementSpeed();
-                                                c.ambientSoundInterval = payload.ambientSoundInterval();
-                                                c.migrationCooldownTicks = payload.migrationCooldownTicks();
-                                                c.dabChance = payload.dabChance();
-                                                QuackConfig.get().validate();
-                                                QuackConfig.save();
-
                                                 if (context.player() instanceof ServerPlayer serverPlayer) {
-                                                        var server = serverPlayer.level().getServer();
-                                                        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                                                                p.connection.send(QuackNetwork.SyncConfigPayload
-                                                                                .fromCurrent());
-                                                        }
-                                                        for (var level : server.getAllLevels()) {
-                                                                for (var duck : level.getEntities(QuackEntityTypes.DUCK,
-                                                                                e -> true)) {
-                                                                        duck.updateFromConfig();
-                                                                }
-                                                        }
+                                                        QuackServerConfig.applyUpdateSaveAndBroadcast(payload,
+                                                                        serverPlayer.level().getServer());
                                                 }
                                         });
                                 });
