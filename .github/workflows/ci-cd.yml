@@ -1,4 +1,4 @@
-name: CI Build
+name: CI/CD Pipeline
 
 on:
   push:
@@ -9,13 +9,13 @@ on:
 
 jobs:
   build:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -23,21 +23,31 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build NeoForge with Gradle
-        run: ./gradlew :neoforge:build
+      - name: Build both loaders with Gradle
+        run: ./gradlew :fabric:build :neoforge:build
 
       - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: quackedmod-jar
-          # Upload only the main jar (exclude dev/sources/shadow)
+          name: quackedmod-jars
+          # Upload only the main jars (exclude dev/sources/shadow)
           path: |
+            fabric/build/libs/*.jar
             neoforge/build/libs/*.jar
-            !neoforge/build/libs/*-dev.jar
-            !neoforge/build/libs/*-shadow.jar
-            !neoforge/build/libs/*-sources.jar
+            !**/*-dev.jar
+            !**/*-shadow.jar
+            !**/*-sources.jar
           retention-days: 7
 
+  # Cuts the GitHub release AND mirrors it to Modrinth + CurseForge in one job.
+  #
+  # Deliberately a single job rather than a second workflow fired by `release: published`:
+  # releases created with the built-in GITHUB_TOKEN do not emit events that start new
+  # workflow runs, so the split version would need a PAT. Everything the platform uploads
+  # need (both jars, the changelog) is already on disk here, so there is nothing to gain
+  # from the split.
+  #
+  # Requires repo secrets MODRINTH_TOKEN and CURSEFORGE_TOKEN.
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
@@ -46,11 +56,11 @@ jobs:
 
     steps:
       # fetch-depth: 0 pulls full history + all tags so we can diff against the previous tag.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -69,13 +79,23 @@ jobs:
             exit 1
           fi
 
+      # Version drives the jar filenames; MC version becomes the platform game-version tag.
+      # Both are read at the tag, so they describe what this release was actually built against.
+      - name: Resolve versions
+        id: vers
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          MC="$(grep -E '^minecraft_version' gradle.properties | sed -E 's/.*=[[:space:]]*//')"
+          echo "minecraft=$MC" >> "$GITHUB_OUTPUT"
+          echo "Releasing ${GITHUB_REF_NAME} for MC $MC"
+
       - name: Build both jars
         run: ./gradlew :fabric:build :neoforge:build
 
       # Copy the exact main jars by version so sources/dev jars are never picked up.
       - name: Collect release jars
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${{ steps.vers.outputs.version }}"
           mkdir -p release-jars
           cp "fabric/build/libs/quack-fabric-${VERSION}.jar" release-jars/
           cp "neoforge/build/libs/quack-neoforge-${VERSION}.jar" release-jars/
@@ -84,6 +104,7 @@ jobs:
       # GitHub's built-in generate_release_notes is PR-based and produces an empty
       # list for our tagging flow (tags cut from direct commits, no PRs in range),
       # so we assemble the changelog from the git log instead.
+      # The same file is reused as the changelog on all three platforms.
       - name: Build changelog
         run: |
           TAG="$GITHUB_REF_NAME"
@@ -110,3 +131,60 @@ jobs:
           files: release-jars/*.jar
           fail_on_unmatched_files: true
           body_path: release-notes.md
+
+      # One upload per loader, so each jar is its own version carrying only its own
+      # loader tag. Both keep the plain version number: Modrinth allows two versions
+      # to share a version number.
+      #
+      # github-token is deliberately omitted in both steps: the release already exists,
+      # mc-publish only needs to touch Modrinth and CurseForge.
+      #
+      # GeckoLib is `implementation`, not `include`, in both loader builds, so it is a
+      # hard external runtime requirement rather than a bundled jar-in-jar. It is
+      # declared `required` here for that reason.
+      # CurseForge relations are keyed by SLUG; a numeric id gets resolved via the
+      # Eternal API and silently dropped if that lookup fails, so slugs are used there.
+      - name: Publish Fabric
+        uses: Kira-NT/mc-publish@v3
+        with:
+          modrinth-id: S92Qdykz
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: false
+
+          curseforge-id: 1345567
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          files: release-jars/quack-fabric-*.jar
+          name: "Ducky Quack Pack ${{ steps.vers.outputs.version }}"
+          version: ${{ steps.vers.outputs.version }}
+          version-type: release
+          changelog-file: release-notes.md
+
+          loaders: fabric
+          game-versions: ${{ steps.vers.outputs.minecraft }}
+
+          dependencies: |
+            geckolib(required){modrinth:8BmcQJ2H}{curseforge:geckolib}
+            fabric-api(required){modrinth:P7dR8mSH}{curseforge:fabric-api}
+
+      - name: Publish NeoForge
+        uses: Kira-NT/mc-publish@v3
+        with:
+          modrinth-id: S92Qdykz
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: false
+
+          curseforge-id: 1345567
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          files: release-jars/quack-neoforge-*.jar
+          name: "Ducky Quack Pack ${{ steps.vers.outputs.version }}"
+          version: ${{ steps.vers.outputs.version }}
+          version-type: release
+          changelog-file: release-notes.md
+
+          loaders: neoforge
+          game-versions: ${{ steps.vers.outputs.minecraft }}
+
+          dependencies: |
+            geckolib(required){modrinth:8BmcQJ2H}{curseforge:geckolib}

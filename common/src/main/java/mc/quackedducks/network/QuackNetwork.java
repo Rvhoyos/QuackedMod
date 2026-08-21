@@ -12,9 +12,9 @@ import net.minecraft.resources.Identifier;
  * Defines the three custom network payloads used by QuackedMod.
  *
  * <ul>
- *   <li>{@link SyncConfigPayload} — server → client on join and after config saves</li>
- *   <li>{@link OpenConfigGuiPayload} — server → client to open the config screen</li>
- *   <li>{@link UpdateConfigPayload} — client → server when the player saves GUI changes</li>
+ *   <li>{@link SyncConfigPayload} - server → client on join and after config saves</li>
+ *   <li>{@link OpenConfigGuiPayload} - server → client to open the config screen</li>
+ *   <li>{@link UpdateConfigPayload} - client → server when the player saves GUI changes</li>
  * </ul>
  *
  * Each loader registers these types independently via its own networking API.

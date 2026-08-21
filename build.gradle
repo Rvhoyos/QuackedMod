@@ -1,4 +1,4 @@
-// Root build.gradle — shared config for all subprojects
+// Root build.gradle - shared config for all subprojects
 
 allprojects {
     group = rootProject.maven_group

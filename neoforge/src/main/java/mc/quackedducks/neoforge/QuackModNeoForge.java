@@ -204,7 +204,7 @@ public final class QuackModNeoForge {
                 SOUNDS.register(modBus);
                 BIOME_MODIFIER_SERIALIZERS.register(modBus);
 
-                // Log init (don't call QuackMod.init() — that uses vanilla Registry.register)
+                // Log init (don't call QuackMod.init() - that uses vanilla Registry.register)
                 QuackMod.LOGGER.info("QuackMod initialized!");
 
                 modBus.addListener(QuackModNeoForge::onEntityAttributeCreation);
@@ -222,7 +222,7 @@ public final class QuackModNeoForge {
                         player.connection.send(new QuackNetwork.OpenConfigGuiPayload());
                 };
 
-                // Config broadcast hook — loader-specific send of the clientbound sync payload.
+                // Config broadcast hook - loader-specific send of the clientbound sync payload.
                 QuackMod.CONFIG_BROADCASTER = (server) -> {
                         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                                 p.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
@@ -246,7 +246,7 @@ public final class QuackModNeoForge {
 
                 registrar.configurationToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
                                 (payload, context) -> {
-                                        // Configuration sync during config phase — apply only; no
+                                        // Configuration sync during config phase - apply only; no
                                         // entities are loaded yet, so there is nothing to refresh.
                                         QuackConfig.get().apply(payload);
                                 });

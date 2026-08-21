@@ -60,14 +60,14 @@ public final class QuackModFabric implements ModInitializer {
             ServerPlayNetworking.send(player, new QuackNetwork.OpenConfigGuiPayload());
         };
 
-        // Config broadcast hook — loader-specific send of the clientbound sync payload.
+        // Config broadcast hook - loader-specific send of the clientbound sync payload.
         QuackMod.CONFIG_BROADCASTER = (server) -> {
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                 ServerPlayNetworking.send(p, QuackNetwork.SyncConfigPayload.fromCurrent());
             }
         };
 
-        // Update Handler — transport + thread dispatch only; logic lives in common.
+        // Update Handler - transport + thread dispatch only; logic lives in common.
         ServerPlayNetworking.registerGlobalReceiver(QuackNetwork.UPDATE_CONFIG, (payload, context) -> {
             context.server().execute(
                     () -> QuackServerConfig.applyUpdateSaveAndBroadcast(payload, context.server()));

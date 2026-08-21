@@ -28,5 +28,16 @@ versionRange = "[26.1,)"
 ordering = "NONE"
 side = "BOTH"
 
+# GeckoLib is `implementation`, not `include`, in neoforge/build.gradle, so it is not
+# bundled into the jar. Without this entry a user missing it gets a ClassNotFoundException
+# instead of NeoForge's missing-dependency screen.
+# side = BOTH: DuckEntity implements GeoEntity in common code, so the server needs it too.
+[[dependencies.quack]]
+modId = "geckolib"
+type = "required"
+versionRange = "[5.5.3,6)"
+ordering = "NONE"
+side = "BOTH"
+
 [[mixins]]
 config = "quack.mixins.json"

@@ -27,7 +27,7 @@ public final class QuackModFabricClient implements ClientModInitializer {
                 QuackEntityTypes.DUCK_EGG_PROJECTILE,
                 ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<DuckEggEntity>(ctx, 1.0f, false));
 
-        // Networking receivers — transport + thread dispatch only; logic lives in common.
+        // Networking receivers - transport + thread dispatch only; logic lives in common.
         ClientPlayNetworking.registerGlobalReceiver(QuackNetwork.SYNC_CONFIG, (payload, context) -> {
             context.client().execute(() -> QuackClientConfig.applySyncAndRefresh(payload));
         });

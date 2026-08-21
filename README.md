@@ -110,13 +110,13 @@ Config is stored in `config/quack.json`. On version upgrades, existing values ar
 2. Drop into `.minecraft/mods/`:
    - `fabric-api (26.2).jar`
    - `geckolib-fabric-5.5.3.jar`
-   - `quack-fabric-2.0.2.jar`
+   - `quack-fabric-2.0.3.jar`
 
 ### Manual - NeoForge Client
 1. Install NeoForge for 26.2.
 2. Drop into `.minecraft/mods/`:
    - `geckolib-neoforge-5.5.3.jar`
-   - `quack-neoforge-2.0.2.jar`
+   - `quack-neoforge-2.0.3.jar`
 
 ### Manual - Dedicated Server
 1. Set up a Fabric or NeoForge server for 26.2.

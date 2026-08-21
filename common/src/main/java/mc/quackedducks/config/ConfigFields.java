@@ -8,7 +8,7 @@ package mc.quackedducks.config;
  * {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} implement this
  * interface (their record accessors already match these names), so a single
  * {@link QuackConfig#apply(ConfigFields)} is the one place that copies the field
- * list into the live config — regardless of which direction the payload travelled.
+ * list into the live config - regardless of which direction the payload travelled.
  */
 public interface ConfigFields {
     float duckWidth();

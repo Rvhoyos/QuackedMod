@@ -22,8 +22,8 @@ import java.util.List;
  *
  * <p>Two sub-objects are exposed:
  * <ul>
- *   <li>{@link GenericDucks} — per-duck physical and audio parameters</li>
- *   <li>{@link Spawning} — world-spawn weights, group sizes, and biome lists</li>
+ *   <li>{@link GenericDucks} - per-duck physical and audio parameters</li>
+ *   <li>{@link Spawning} - world-spawn weights, group sizes, and biome lists</li>
  * </ul>
  */
 public class QuackConfig {
@@ -76,7 +76,7 @@ public class QuackConfig {
     /**
      * Copies the networked {@link ConfigFields} into {@link #genericDucks} and re-validates.
      * The single source of truth for applying an incoming config payload (in either
-     * direction) — used by both loaders' client sync and server update handlers.
+     * direction) - used by both loaders' client sync and server update handlers.
      */
     public void apply(ConfigFields src) {
         genericDucks.duckWidth = src.duckWidth();
@@ -140,7 +140,7 @@ public class QuackConfig {
 
         // Version migration: preserve existing values, update version, re-save so any
         // fields added in the new version are written with their defaults.
-        // Never wipe the config — users lose their customizations that way.
+        // Never wipe the config - users lose their customizations that way.
         if (instance.configVersion != CURRENT_VERSION) {
             QuackMod.LOGGER.info("Quack config migrated from version {} to {}; new fields use defaults.",
                     instance.configVersion, CURRENT_VERSION);
