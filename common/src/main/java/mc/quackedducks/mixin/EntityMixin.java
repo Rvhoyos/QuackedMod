@@ -1,7 +1,6 @@
 package mc.quackedducks.mixin;
 
 import mc.quackedducks.entities.DuckEntity;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
 import org.spongepowered.asm.mixin.Mixin;

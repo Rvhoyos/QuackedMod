@@ -22,6 +22,17 @@ loom {
             ideConfigGenerated true
             programArg '--username=Dev'
         }
+        // Second dev client for multiplayer testing. The server rejects two logins
+        // with the same username, so this one is Dev2 with its own run dir.
+        client2 {
+            client()
+            runDir 'runs/client2'
+            ideConfigGenerated true
+            programArg '--username=Dev2'
+            // Two clients on one machine race to extract LWJGL natives into the same
+            // shared temp dir; give this one its own.
+            vmArg '-Dorg.lwjgl.system.SharedLibraryExtractDirectory=lwjgl-client2'
+        }
         server {
             runDir 'runs/server'
             ideConfigGenerated true

@@ -1,5 +1,6 @@
 package mc.quackedducks.client.gui;
 
+import mc.quackedducks.QuackMod;
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.network.QuackNetwork;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -18,15 +19,28 @@ import net.minecraft.util.Mth;
  * {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} to the server.
  * Changes take effect on all clients after the server re-broadcasts a
  * {@link mc.quackedducks.network.QuackNetwork.SyncConfigPayload}.
+ *
+ * <p>Sliders edit {@link #draft}, a private copy of the live config, never the
+ * {@link QuackConfig} singleton. Only "Done" publishes it, so closing with ESC
+ * discards the edits instead of leaving the client's ducks the wrong size until
+ * the next sync.
  */
 public class QuackConfigScreen extends Screen {
+    /** Unsaved working copy. The singleton is only written by the sync handler. */
+    private QuackConfig.GenericDucks draft;
+
     public QuackConfigScreen() {
         super(Component.literal("QuackedMod Configuration"));
     }
 
     @Override
     protected void init() {
-        var config = QuackConfig.get().genericDucks;
+        // Only snapshot on first open - rebuildWidgets() re-enters init() and must keep
+        // whatever the player has already dragged.
+        if (draft == null) {
+            draft = new QuackConfig.GenericDucks(QuackConfig.get().genericDucks);
+        }
+
         int centerX = this.width / 2;
         int startY = 50;
         int spacing = 26;
@@ -35,54 +49,51 @@ public class QuackConfigScreen extends Screen {
 
         // Width Slider (0.1 - 5.0)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
-                Component.literal("Duck Width: "), config.duckWidth, 0.1f, 5.0f, (val) -> config.duckWidth = val));
+                Component.literal("Duck Width: "), draft.duckWidth, 0.1f, 5.0f, (val) -> draft.duckWidth = val));
 
         startY += spacing;
 
         // Height Slider (0.1 - 5.0)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
-                Component.literal("Duck Height: "), config.duckHeight, 0.1f, 5.0f, (val) -> config.duckHeight = val));
+                Component.literal("Duck Height: "), draft.duckHeight, 0.1f, 5.0f, (val) -> draft.duckHeight = val));
 
         startY += spacing;
 
         // Speed Slider (0.05 - 1.0)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
-                Component.literal("Movement Speed: "), (float) config.movementSpeed, 0.05f, 1.0f,
-                (val) -> config.movementSpeed = val));
+                Component.literal("Movement Speed: "), (float) draft.movementSpeed, 0.05f, 1.0f,
+                (val) -> draft.movementSpeed = val));
 
         startY += spacing;
 
         // Sound Interval Slider (20 - 1200)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
-                Component.literal("Quack Sound Freq (Ticks): "), (float) config.ambientSoundInterval, 20.0f, 1200.0f,
-                (val) -> config.ambientSoundInterval = val.intValue()));
+                Component.literal("Quack Sound Freq (Ticks): "), (float) draft.ambientSoundInterval, 20.0f, 1200.0f,
+                (val) -> draft.ambientSoundInterval = val.intValue()));
 
         startY += spacing;
 
         // Migration Cooldown Slider (20 - 12000 ticks; 20=~1s for testing, 12000=10min)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
-                Component.literal("Migration Cooldown (Ticks): "), (float) config.migrationCooldownTicks, 20.0f, 12000.0f,
-                (val) -> config.migrationCooldownTicks = val.intValue()));
+                Component.literal("Migration Cooldown (Ticks): "), (float) draft.migrationCooldownTicks, 20.0f, 12000.0f,
+                (val) -> draft.migrationCooldownTicks = val.intValue()));
 
         startY += spacing;
 
         // Dab Chance Slider (1 - 20; 1=always, 5=20% default, 20=5% rare)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
-                Component.literal("Dab Chance (1=always, 20=rare): "), (float) config.dabChance, 1.0f, 20.0f,
-                (val) -> config.dabChance = val.intValue()));
+                Component.literal("Dab Chance (1=always, 20=rare): "), (float) draft.dabChance, 1.0f, 20.0f,
+                (val) -> draft.dabChance = val.intValue()));
 
         // --- Footer Buttons ---
 
         this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), (button) -> {
-            QuackConfig.get().genericDucks = new QuackConfig.GenericDucks();
+            draft = new QuackConfig.GenericDucks();
             this.rebuildWidgets();
         }).bounds(centerX - 100, this.height - 55, 200, 20).build());
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, (button) -> {
-            QuackConfig.get().validate();
-            mc.quackedducks.QuackMod.sendConfigUpdate(new QuackNetwork.UpdateConfigPayload(
-                    config.duckWidth, config.duckHeight, config.movementSpeed,
-                    config.ambientSoundInterval, config.migrationCooldownTicks, config.dabChance));
+            QuackMod.sendConfigUpdate(QuackNetwork.from(draft, QuackNetwork.UpdateConfigPayload::new));
             this.onClose();
         }).bounds(centerX - 100, this.height - 30, 200, 20).build());
     }

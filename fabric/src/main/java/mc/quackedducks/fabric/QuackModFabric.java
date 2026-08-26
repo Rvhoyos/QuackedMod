@@ -11,7 +11,6 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.level.ServerPlayer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
@@ -50,22 +49,12 @@ public final class QuackModFabric implements ModInitializer {
         PayloadTypeRegistry.serverboundPlay().register(QuackNetwork.UPDATE_CONFIG,
                 QuackNetwork.UpdateConfigPayload.STREAM_CODEC);
 
+        // Clientbound send hook - the only loader-specific part of the server → client path.
+        QuackMod.CLIENTBOUND_SENDER = ServerPlayNetworking::send;
+
         // Sync on join
-        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            ServerPlayNetworking.send(handler.player, QuackNetwork.SyncConfigPayload.fromCurrent());
-        });
-
-        // GUI Opener Hook
-        QuackMod.CONFIG_OPENER = (player) -> {
-            ServerPlayNetworking.send(player, new QuackNetwork.OpenConfigGuiPayload());
-        };
-
-        // Config broadcast hook - loader-specific send of the clientbound sync payload.
-        QuackMod.CONFIG_BROADCASTER = (server) -> {
-            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                ServerPlayNetworking.send(p, QuackNetwork.SyncConfigPayload.fromCurrent());
-            }
-        };
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
+                (handler, sender, server) -> QuackMod.sendConfigSync(handler.player));
 
         // Update Handler - transport + thread dispatch only; logic lives in common.
         ServerPlayNetworking.registerGlobalReceiver(QuackNetwork.UPDATE_CONFIG, (payload, context) -> {
@@ -77,8 +66,8 @@ public final class QuackModFabric implements ModInitializer {
         FabricDefaultAttributeRegistry.register(QuackEntityTypes.DUCK, DuckEntity.createAttributes());
 
         // Biome spawns - Load from config
-        var duckBiomes = new java.util.HashSet<>(mc.quackedducks.config.QuackConfig.getDuckBiomes());
-        var wetBiomes = new java.util.HashSet<>(mc.quackedducks.config.QuackConfig.getWetBiomes());
+        var duckBiomes = mc.quackedducks.config.QuackConfig.getDuckBiomes();
+        var wetBiomes = mc.quackedducks.config.QuackConfig.getWetBiomes();
         var config = mc.quackedducks.config.QuackConfig.get();
 
         BiomeModifications.addSpawn(

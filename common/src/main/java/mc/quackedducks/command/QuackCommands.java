@@ -2,11 +2,11 @@ package mc.quackedducks.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import mc.quackedducks.QuackMod;
-import mc.quackedducks.config.QuackConfig;
-import net.minecraft.resources.Identifier;
+import mc.quackedducks.QuackServerConfig;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 
 /** Registers the {@code /quack} command tree (requires gamemaster permission). */
@@ -21,15 +21,14 @@ public class QuackCommands {
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                 .then(Commands.literal("reload")
                         .executes(context -> {
-                            QuackConfig.load();
-                            context.getSource()
-                                    .sendSuccess(() -> Component.literal("QuackedMod configuration reloaded."), true);
+                            QuackServerConfig.reloadAndBroadcast(context.getSource().getServer());
+                            context.getSource().sendSuccess(() -> Component.literal(
+                                    "QuackedMod configuration reloaded. Spawn settings apply on restart."), true);
                             return 1;
                         }))
                 .then(Commands.literal("config")
                         .executes(context -> {
-                            if (context.getSource()
-                                    .getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+                            if (context.getSource().getEntity() instanceof ServerPlayer player) {
                                 QuackMod.openConfigGui(player);
                                 return 1;
                             }

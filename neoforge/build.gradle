@@ -11,6 +11,16 @@ neoForge {
             client()
             programArguments.addAll '--username', 'Dev'
         }
+        // Second dev client for multiplayer testing. The server rejects two logins
+        // with the same username, so this one is Dev2 with its own run dir.
+        client2 {
+            client()
+            gameDirectory = project.file('runs/client2')
+            programArguments.addAll '--username', 'Dev2'
+            // Two clients on one machine race to extract LWJGL natives into the same
+            // shared temp dir; give this one its own.
+            systemProperty 'org.lwjgl.system.SharedLibraryExtractDirectory', 'lwjgl-client2'
+        }
         server {
             server()
             programArgument '--nogui'

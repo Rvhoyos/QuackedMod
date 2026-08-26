@@ -46,7 +46,7 @@ import org.slf4j.Logger;
  *   <li>Water guard: stops nav and returns early when duck is fully submerged
  *       and not in flying mode - lets {@code FloatGoal} surface the duck
  *       without interference.</li>
- *   <li>Advance migrate cooldown.</li>
+ *   <li>Advance cooldowns ({@code migrateCooldown}, {@code minStateTicksLeft}).</li>
  *   <li>Find best state via priority scan.</li>
  *   <li>Transition if state changed.</li>
  *   <li>Tick current state.</li>
@@ -74,12 +74,15 @@ public class DuckBrainGoal extends Goal {
         PANIC_GROUND,
         /** Untamed adult leader → flies 80–140 blocks to a random land target. */
         MIGRATE,
-        /** Follower duck → flies in V-formation behind its leader while leader is airborne. */
+        /** Follower duck → flies single-file behind its leader while leader is airborne. */
         FOLLOW_LEADER_AIR,
         /**
          * Transitional state entered whenever an airborne state ends.
-         * {@code stopFlying()} is called on entry (gravity re-engages); no nav is issued
-         * until the duck physically lands ({@code onGround()} or 60-tick timeout).
+         * Flying mode is <strong>kept</strong> on entry and {@code flyingNav} is given a descent
+         * command to {@code groundY + 1.5}; {@code stopFlying()} is deferred to
+         * {@link #tickCurrentState} and fires once that nav completes or {@link #MAX_LANDING_TICKS}
+         * expires. Calling {@code stopFlying()} on entry instead would re-engage gravity while the
+         * duck still carries downward flight velocity, which is what sank ducks on landing.
          * Never selected by the priority scan - only entered via the intercept in
          * {@link #doTransition}.
          */
@@ -478,7 +481,7 @@ public class DuckBrainGoal extends Goal {
         boolean keepSlot = isFollowLeaderState(from) && isFollowLeaderState(to);
 
         // Intercept: every airborne→ground transition routes through LANDING first.
-        // stopFlying() is called on LANDING entry; no new nav until the duck lands.
+        // Flying mode is kept so flyingNav can descend; stopFlying() is deferred (see enterState).
         if (isAirborne(from) && !isAirborne(to) && to != BrainState.LANDING) {
             pendingLanding = true;
             to = BrainState.LANDING;
@@ -705,7 +708,8 @@ public class DuckBrainGoal extends Goal {
      * {@link BrainState#FOLLOW_LEADER_GROUND}.
      *
      * <h4>Ground water guard</h4>
-     * <p>If the leader is anywhere in water, nav is stopped, {@link #repathCooldown}
+     * <p>If the leader is submerged ({@code leader.isUnderWater()}, i.e. eyes below the surface -
+     * <em>not</em> merely touching water), nav is stopped, {@link #repathCooldown}
      * and {@link #lastIssuedFollowTarget} are cleared, and the follower parks until
      * the leader exits the water. Clearing the cooldown ensures any previously-committed
      * underwater path is abandoned immediately rather than surviving 8–10 more ticks.
@@ -716,9 +720,10 @@ public class DuckBrainGoal extends Goal {
      * issued target AND the navigator is still running. This prevents constant
      * pathfinder calls when the leader is barely moving.
      *
-     * @param airborne true → {@link BrainState#FOLLOW_LEADER_AIR} (flying nav,
-     *                 V-formation target); false → {@link BrainState#FOLLOW_LEADER_GROUND}
-     *                 (ground nav, direct-position target)
+     * @param airborne true → {@link BrainState#FOLLOW_LEADER_AIR} (flying nav); false →
+     *                 {@link BrainState#FOLLOW_LEADER_GROUND} (ground nav). Selects the speed
+     *                 constants and enables the water guard; the target position is the leader's
+     *                 own position either way (single-file).
      */
     private void tickFollowLeader(boolean airborne) {
         DuckEntity leader = duck.getLeader();
@@ -839,13 +844,17 @@ public class DuckBrainGoal extends Goal {
     // ── Entity search helpers ─────────────────────────────────────────────────
 
     /**
-     * Finds the nearest adult duck within {@link #SEARCH_RADIUS} that:
+     * Finds the nearest duck within {@link #SEARCH_RADIUS} that:
      * <ul>
      *   <li>is alive and not removed,</li>
      *   <li>has at least one open follower slot ({@code !hasFollower()}),</li>
      *   <li>is not already following this duck (avoids trivial cycles), and</li>
      *   <li>would not create a longer cycle ({@link #wouldCycle}).</li>
      * </ul>
+     *
+     * <p>Note: babies are <em>not</em> filtered out here. A baby candidate is rejected later by
+     * {@link DuckEntity#claimFollower}, which returns null for babies, and {@link #enterState}
+     * self-heals on the next tick.
      *
      * @return the nearest qualifying duck, or {@code null} if none found
      */
@@ -884,7 +893,7 @@ public class DuckBrainGoal extends Goal {
         return false;
     }
 
-    /** Finds the nearest adult (non-baby) {@link DuckEntity} within 8 blocks of this duck. */
+    /** Finds an adult (non-baby) {@link DuckEntity} within 8 blocks - the first match, not the nearest. */
     private DuckEntity findParent() {
         AABB box = duck.getBoundingBox().inflate(8.0);
         return duck.level().getEntitiesOfClass(DuckEntity.class, box,

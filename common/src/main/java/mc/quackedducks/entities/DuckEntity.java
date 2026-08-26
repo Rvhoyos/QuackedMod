@@ -14,8 +14,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
@@ -456,7 +454,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     }
 
     @Override
-    public InteractionResult mobInteract(Player player, net.minecraft.world.InteractionHand hand) {
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
         InteractionResult interactionResult = super.mobInteract(player, hand);
         if (interactionResult.consumesAction()) {
             return interactionResult;
@@ -479,16 +477,6 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         }
 
         return super.mobInteract(player, hand);
-    }
-
-    @Override
-    protected void addAdditionalSaveData(ValueOutput out) {
-        super.addAdditionalSaveData(out);
-    }
-
-    @Override
-    protected void readAdditionalSaveData(ValueInput in) {
-        super.readAdditionalSaveData(in);
     }
 
     /**
@@ -554,16 +542,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                 .scalable(config.duckWidth, config.duckHeight)
                 .withEyeHeight(config.duckHeight);
 
-        var finalDims = this.isBaby() ? dims.scale(0.5F) : dims;
-
-        // Diagnostic log tracking removed
-
-        return finalDims;
-    }
-
-    @Override
-    public void refreshDimensions() {
-        super.refreshDimensions();
+        return this.isBaby() ? dims.scale(config.babyScale) : dims;
     }
 
     /**
@@ -609,11 +588,6 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         return inFlyingMode;
     }
 
-    /** @return true when not physically on the ground. */
-    public boolean isFlying() {
-        return !this.onGround();
-    }
-
     /** Ducks are birds - no fall damage. */
     @Override
     protected void checkFallDamage(double y, boolean onGround,
@@ -629,14 +603,21 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     public void updateFromConfig() {
         var config = mc.quackedducks.config.QuackConfig.get().genericDucks;
 
-        var speedAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (speedAttr != null) {
-            speedAttr.setBaseValue(config.movementSpeed);
+        // Attributes are server-authoritative and replicated by vanilla. maxHealth is not
+        // even in ConfigFields, so on the client this would write the client's own file
+        // over the server's synced value.
+        if (!this.level().isClientSide()) {
+            var speedAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (speedAttr != null) {
+                speedAttr.setBaseValue(config.movementSpeed);
+            }
+            var healthAttr = this.getAttribute(Attributes.MAX_HEALTH);
+            if (healthAttr != null) {
+                healthAttr.setBaseValue(config.maxHealth);
+            }
         }
-        var healthAttr = this.getAttribute(Attributes.MAX_HEALTH);
-        if (healthAttr != null) {
-            healthAttr.setBaseValue(config.maxHealth);
-        }
+
+        // Hitboxes are sized from the synced fields, so both sides refresh.
         this.refreshDimensions();
     }
 }

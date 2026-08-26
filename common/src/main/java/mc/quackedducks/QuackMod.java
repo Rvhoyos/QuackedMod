@@ -1,10 +1,18 @@
 package mc.quackedducks;
 
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import mc.quackedducks.entities.QuackEntityTypes;
 import mc.quackedducks.items.QuackyModItems;
+import mc.quackedducks.network.QuackNetwork;
 import mc.quackedducks.sound.QuackedSounds;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Common entrypoint and shared bootstrap.
@@ -44,45 +52,47 @@ public final class QuackMod {
     }
 
     /**
-     * Loader-injected handler that sends an {@link mc.quackedducks.network.QuackNetwork.OpenConfigGuiPayload}
-     * to the given player, causing the client to open {@link mc.quackedducks.client.gui.QuackConfigScreen}.
-     * Back-filled by each loader entrypoint before any command can invoke it.
+     * Loader-injected strategy for sending any clientbound payload to one player.
+     * Sending is the only genuinely loader-specific part of the server → client path
+     * (Fabric {@code ServerPlayNetworking.send} vs NeoForge {@code player.connection.send}),
+     * so it is the only thing the loaders back-fill; which payload to send and to whom is
+     * decided here in common.
      */
-    public static java.util.function.Consumer<net.minecraft.server.level.ServerPlayer> CONFIG_OPENER = (p) -> {
-        LOGGER.warn("Config opener not initialized!");
+    public static BiConsumer<ServerPlayer, CustomPacketPayload> CLIENTBOUND_SENDER = (player, payload) -> {
+        LOGGER.warn("Clientbound sender not initialized!");
     };
 
-    /** Sends an {@link mc.quackedducks.network.QuackNetwork.OpenConfigGuiPayload} to {@code player}. */
-    public static void openConfigGui(net.minecraft.server.level.ServerPlayer player) {
-        CONFIG_OPENER.accept(player);
-    }
-
     /**
-     * Loader-injected handler that forwards an {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload}
-     * from the client GUI to the server. Back-filled by each loader entrypoint before
-     * the config screen can be opened.
+     * Loader-injected handler that forwards an {@link QuackNetwork.UpdateConfigPayload}
+     * from the client GUI to the server. Back-filled by each loader's client entrypoint
+     * before the config screen can be opened.
      */
-    public static java.util.function.Consumer<mc.quackedducks.network.QuackNetwork.UpdateConfigPayload> PACKET_SENDER = (
-            p) -> {
+    public static Consumer<QuackNetwork.UpdateConfigPayload> PACKET_SENDER = (payload) -> {
         LOGGER.warn("Packet sender not initialized!");
     };
 
-    /** Sends an {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} to the server. */
-    public static void sendConfigUpdate(mc.quackedducks.network.QuackNetwork.UpdateConfigPayload payload) {
-        PACKET_SENDER.accept(payload);
+    /**
+     * Sends an {@link QuackNetwork.OpenConfigGuiPayload} to {@code player}, causing the client
+     * to open {@link mc.quackedducks.client.gui.QuackConfigScreen}.
+     */
+    public static void openConfigGui(ServerPlayer player) {
+        CLIENTBOUND_SENDER.accept(player, new QuackNetwork.OpenConfigGuiPayload());
     }
 
-    /**
-     * Loader-injected handler that broadcasts the current config to every connected player as a
-     * {@link mc.quackedducks.network.QuackNetwork.SyncConfigPayload}. Sending a clientbound custom
-     * payload is loader-specific, so each loader back-fills this before any config update is served.
-     */
-    public static java.util.function.Consumer<net.minecraft.server.MinecraftServer> CONFIG_BROADCASTER = (s) -> {
-        LOGGER.warn("Config broadcaster not initialized!");
-    };
+    /** Sends the live config to a single player - used on join. */
+    public static void sendConfigSync(ServerPlayer player) {
+        CLIENTBOUND_SENDER.accept(player, QuackNetwork.SyncConfigPayload.fromCurrent());
+    }
 
-    /** Broadcasts the live config to all players on {@code server} via {@link #CONFIG_BROADCASTER}. */
-    public static void broadcastConfigSync(net.minecraft.server.MinecraftServer server) {
-        CONFIG_BROADCASTER.accept(server);
+    /** Sends the live config to every player on {@code server}. */
+    public static void broadcastConfigSync(MinecraftServer server) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            sendConfigSync(player);
+        }
+    }
+
+    /** Sends an {@link QuackNetwork.UpdateConfigPayload} to the server. */
+    public static void sendConfigUpdate(QuackNetwork.UpdateConfigPayload payload) {
+        PACKET_SENDER.accept(payload);
     }
 }

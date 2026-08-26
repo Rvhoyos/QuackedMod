@@ -65,7 +65,9 @@ A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI,
 | Duck Spawn Egg | Creative only | Spawns a duck |
 
 ### Configuration (`/quack config`)
-All values sync server → client on join. Changes apply to all loaded ducks immediately.
+Entity values sync server to client on join and apply to all loaded ducks immediately, whether they
+were changed in the GUI or by editing `config/quack.json` and running `/quack reload`. `maxHealth` is
+server-side only. Spawn settings are read at world load and need a restart.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -110,13 +112,13 @@ Config is stored in `config/quack.json`. On version upgrades, existing values ar
 2. Drop into `.minecraft/mods/`:
    - `fabric-api (26.2).jar`
    - `geckolib-fabric-5.5.3.jar`
-   - `quack-fabric-2.0.3.jar`
+   - `quack-fabric-2.0.4.jar`
 
 ### Manual - NeoForge Client
 1. Install NeoForge for 26.2.
 2. Drop into `.minecraft/mods/`:
    - `geckolib-neoforge-5.5.3.jar`
-   - `quack-neoforge-2.0.3.jar`
+   - `quack-neoforge-2.0.4.jar`
 
 ### Manual - Dedicated Server
 1. Set up a Fabric or NeoForge server for 26.2.

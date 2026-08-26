@@ -29,7 +29,6 @@ import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 import net.minecraft.world.item.component.TypedEntityData;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.component.CustomData;
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.network.QuackNetwork;
 import net.minecraft.server.level.ServerPlayer;
@@ -120,7 +119,6 @@ public final class QuackModNeoForge {
         public static final DeferredHolder<MapCodec<? extends BiomeModifier>, MapCodec<ConfigBiomeModifier>> CONFIG_SPAWNS_SERIALIZER = BIOME_MODIFIER_SERIALIZERS
                         .register("config_spawns", () -> ConfigBiomeModifier.CODEC);
 
-        // --- Items ---
         // --- Items ---
         public static final DeferredHolder<Item, Item> DUCK_EGG_ITEM = ITEMS.register("duck_egg", () -> new DuckEggItem(
                         QuackyModItems.baseProperties("duck_egg").stacksTo(64)));
@@ -217,17 +215,8 @@ public final class QuackModNeoForge {
                 // Common init
                 mc.quackedducks.config.QuackConfig.load(); // Ensure config is loaded on NeoForge side
 
-                // GUI Opener Hook
-                QuackMod.CONFIG_OPENER = (player) -> {
-                        player.connection.send(new QuackNetwork.OpenConfigGuiPayload());
-                };
-
-                // Config broadcast hook - loader-specific send of the clientbound sync payload.
-                QuackMod.CONFIG_BROADCASTER = (server) -> {
-                        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                                p.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
-                        }
-                };
+                // Clientbound send hook - the only loader-specific part of the server → client path.
+                QuackMod.CLIENTBOUND_SENDER = (player, payload) -> player.connection.send(payload);
         }
 
         private void onRegisterCommands(RegisterCommandsEvent event) {
@@ -237,7 +226,7 @@ public final class QuackModNeoForge {
         private void onPlayerLoggedIn(
                         net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
                 if (event.getEntity() instanceof ServerPlayer player) {
-                        player.connection.send(QuackNetwork.SyncConfigPayload.fromCurrent());
+                        QuackMod.sendConfigSync(player);
                 }
         }
 
