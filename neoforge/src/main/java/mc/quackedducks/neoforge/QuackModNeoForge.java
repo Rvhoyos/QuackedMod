@@ -52,27 +52,24 @@ import com.mojang.serialization.MapCodec;
 /**
  * NeoForge entrypoint.
  *
- * Uses NeoForge's DeferredRegister for all registry operations since
- * vanilla Registry.register() throws "Registry is already frozen" on NeoForge.
- *
- * After registration, common static fields are back-filled so shared code
- * (DuckEntity, DuckEggEntity, etc.) can reference them normally.
+ * Everything goes through DeferredRegister here, because vanilla Registry.register()
+ * throws "Registry is already frozen" on NeoForge. Once those resolve, the static
+ * fields in common are back-filled so shared code can use them as usual.
  */
 @Mod(QuackMod.MOD_ID)
 public final class QuackModNeoForge {
 
-        // --- Deferred Registers ---
         private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(Registries.ENTITY_TYPE,
                         QuackMod.MOD_ID);
         private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, QuackMod.MOD_ID);
         private static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT,
                         QuackMod.MOD_ID);
-        // NeoForge specialized registries
+        // NeoForge's own registries
         private static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS = DeferredRegister
                         .create(net.neoforged.neoforge.registries.NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS,
                                         QuackMod.MOD_ID);
 
-        // --- Entity Types ---
+        // Entity types
         public static final DeferredHolder<EntityType<?>, EntityType<DuckEggEntity>> DUCK_EGG_PROJECTILE = ENTITIES
                         .register("duck_egg_projectile",
                                         () -> EntityType.Builder.<DuckEggEntity>of(DuckEggEntity::new, MobCategory.MISC)
@@ -94,7 +91,7 @@ public final class QuackModNeoForge {
                                                         Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
                                                                         "duck"))));
 
-        // --- Sounds ---
+        // Sounds
         public static final DeferredHolder<SoundEvent, SoundEvent> DUCK_AMBIENT_SOUND = SOUNDS
                         .register("entity.duck.ambient", () -> {
                                 Identifier id = Identifier.fromNamespaceAndPath(QuackMod.MOD_ID,
@@ -115,11 +112,11 @@ public final class QuackModNeoForge {
                                 return SoundEvent.createVariableRangeEvent(id);
                         });
 
-        // --- Serializers ---
+        // Serializers
         public static final DeferredHolder<MapCodec<? extends BiomeModifier>, MapCodec<ConfigBiomeModifier>> CONFIG_SPAWNS_SERIALIZER = BIOME_MODIFIER_SERIALIZERS
                         .register("config_spawns", () -> ConfigBiomeModifier.CODEC);
 
-        // --- Items ---
+        // Items
         public static final DeferredHolder<Item, Item> DUCK_EGG_ITEM = ITEMS.register("duck_egg", () -> new DuckEggItem(
                         QuackyModItems.baseProperties("duck_egg").stacksTo(64)));
 
@@ -194,15 +191,13 @@ public final class QuackModNeoForge {
                                                                         .build())
                                         .stacksTo(64)));
 
-        // --- Constructor ---
         public QuackModNeoForge(IEventBus modBus) {
-                // Register deferred registers on the mod bus
                 ENTITIES.register(modBus);
                 ITEMS.register(modBus);
                 SOUNDS.register(modBus);
                 BIOME_MODIFIER_SERIALIZERS.register(modBus);
 
-                // Log init (don't call QuackMod.init() - that uses vanilla Registry.register)
+                // Deliberately not QuackMod.init() - that one uses vanilla Registry.register.
                 QuackMod.LOGGER.info("QuackMod initialized!");
 
                 modBus.addListener(QuackModNeoForge::onEntityAttributeCreation);
@@ -215,7 +210,7 @@ public final class QuackModNeoForge {
                 // Common init
                 mc.quackedducks.config.QuackConfig.load(); // Ensure config is loaded on NeoForge side
 
-                // Clientbound send hook - the only loader-specific part of the server → client path.
+                // Sending to a client is the one loader-specific step; common code goes through this hook.
                 QuackMod.CLIENTBOUND_SENDER = (player, payload) -> player.connection.send(payload);
         }
 
@@ -235,8 +230,7 @@ public final class QuackModNeoForge {
 
                 registrar.configurationToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
                                 (payload, context) -> {
-                                        // Configuration sync during config phase - apply only; no
-                                        // entities are loaded yet, so there is nothing to refresh.
+                                        // Config phase, so apply only. No entities exist yet to refresh.
                                         QuackConfig.get().apply(payload);
                                 });
 
@@ -268,8 +262,8 @@ public final class QuackModNeoForge {
         }
 
         /**
-         * Back-fill common static fields after deferred registration resolves.
-         * Called from entity attribute event which fires after registries are done.
+         * Copies the registered objects into the static fields common code reads.
+         * Hung off the attribute event because that fires after the registries are done.
          */
         private static void backfillCommonFields() {
                 QuackEntityTypes.DUCK = DUCK.get();

@@ -44,39 +44,34 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
 /**
- * Quacked Ducks - main duck entity.
- * 
- * - Eats seeds (tempt goal).
- * - Avoids common predators, swims, breeds, and follows a parent when young.
- * - GeckoLib-powered idle/walk animations.
- * - Basic "follow a leader" chain via {@code following}/{@code followedBy}.
+ * The duck.
+ *
+ * Tames on seeds, breeds, swims, keeps away from anything that would eat it, and
+ * strings itself into a flock: every duck either leads or follows one other duck.
+ * All of its movement comes from DuckBrainGoal; the rest of the AI here is vanilla goals.
  */
 public class DuckEntity extends TamableAnimal implements GeoEntity {
-    // --- Follow the leader chain state ---
     @Nullable
-    private DuckEntity following;       // who I’m following
+    private DuckEntity following;       // the duck ahead of me
     @Nullable
-    private DuckEntity followedByLeft;  // left-slot follower (all ducks)
+    private DuckEntity followedByLeft;  // any duck can carry one follower here
     @Nullable
-    private DuckEntity followedByRight; // right-slot follower (leaders only → V formation)
+    private DuckEntity followedByRight; // leaders carry a second, which is what makes the V
 
-    // --- Flying navigation ---
     private GroundPathNavigation groundNav;
     private FlyingPathNavigation flyingNav;
     private net.minecraft.world.entity.ai.control.MoveControl groundMoveControl;
     private FlyingMoveControl flyingMoveControl;
     private boolean inFlyingMode = false;
 
-    // --- Synched animation hint (server → client) ---
-    // 0 = idle, 1 = walk, 2 = panic
-    // Flying is determined client-side by onGround(); this covers ground state distinctions.
+    // Sent to the client so it knows which animation to play. Flying is not in here:
+    // the client works that out from onGround() on its own.
     private static final EntityDataAccessor<Byte> DATA_ANIM_HINT =
             SynchedEntityData.defineId(DuckEntity.class, EntityDataSerializers.BYTE);
     private static final byte HINT_IDLE  = 0;
     private static final byte HINT_WALK  = 1;
     private static final byte HINT_PANIC = 2;
 
-    // --- GeckoLib animation cache & clips ---
     private final AnimatableInstanceCache cache = com.geckolib.util.GeckoLibUtil.createInstanceCache(this);
     private static final RawAnimation IDLE       = RawAnimation.begin().thenLoop("animation.duck.idle");
     private static final RawAnimation WALK       = RawAnimation.begin().thenLoop("animation.duck.walk");
@@ -84,35 +79,33 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     private static final RawAnimation FLY        = RawAnimation.begin().thenLoop("animation.duck.fly");
     private static final RawAnimation DAB        = RawAnimation.begin().thenPlay("animation.duck.dab");
 
-    // --- Owner-follow gating (stability) ---
-    private int headStableTicks = 0; // counts how long we've been the head
-    private static final int HEAD_STABLE_REQUIRED = 120; // 6s @ 20tps
+    // How long this duck has led without interruption. A tamed duck will not start
+    // following its owner until this is up, so it does not abandon a flock mid-shuffle.
+    private int headStableTicks = 0;
+    private static final int HEAD_STABLE_REQUIRED = 120; // six seconds
 
-    // --- Reference to the brain goal for animation hints ---
     private mc.quackedducks.entities.ai.DuckBrainGoal brainGoal;
 
-    // --- Debug logging ---
     private static final Logger LOG = LogUtils.getLogger();
-    /** Verbose duck AI/animation debug logs. Off unless {@code -Dquack.debug=true} is set. */
+    /** Same flag as QuackDebug.ENABLED. Off unless -Dquack.debug=true is set. */
     private static final boolean DEBUG_DUCKS = mc.quackedducks.QuackDebug.ENABLED;
 
-    /** Which follower slot a duck occupies behind its leader (used for V-formation offsets). */
+    /** Which side of the leader a follower sits on. */
     public enum FollowerSlot { LEFT, RIGHT }
 
-    private int idleVariantCooldown = 10; // ticks until next idle variant allowed
-    // one-shot playback lock (add these)
-    private int oneShotLockTicks = 0; // ticks left while a one-shot plays
+    private int idleVariantCooldown = 10;
+    private int oneShotLockTicks = 0;
     private RawAnimation currentOneShot = null;
-    // -- hopefully the fix for desync / animation cut offs --
+    // The controller below is not called exactly once per tick, so it remembers the last
+    // tick it saw and ages its timers by the difference.
     private int lastTickSeen = -1;
 
-    // --- Movement tuning ---
-    /** +25% movement speed on the head duck's MOVEMENT_SPEED attribute. Transient - not saved. */
+    /** A quarter again as fast, so the leader can actually pull away and be followed. */
     private static final Identifier LEADER_SPEED_ID = Identifier.fromNamespaceAndPath("quack", "leader_speed");
     private static final AttributeModifier LEADER_SPEED_MODIFIER =
             new AttributeModifier(LEADER_SPEED_ID, 0.25, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
 
-    // Ducks like seeds - TODO: add breadcrumb item.
+    // TODO: add breadcrumb item.
     private static final Ingredient DUCK_FOOD = Ingredient.of(
             Items.WHEAT_SEEDS,
             Items.BEETROOT_SEEDS,
@@ -120,13 +113,13 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
             Items.PUMPKIN_SEEDS,
             Items.TORCHFLOWER_SEEDS);
 
-    /** Standard constructor used by the engine/registries. */
     public DuckEntity(EntityType<? extends DuckEntity> type, Level level) {
         super(type, level);
-        // groundMoveControl is set by Mob's constructor before this line runs
+        // Mob's constructor has already set moveControl, so this grabs the ground one
+        // before we replace it. Both are kept for the rest of the duck's life.
         this.groundMoveControl = this.moveControl;
-        // hoversInPlace=true: holds altitude between nav waypoints instead of falling.
-        // Landing is triggered explicitly by stopFlying() → setNoGravity(false).
+        // hoversInPlace, so a flying duck holds its altitude between waypoints instead
+        // of sagging. Coming down is stopFlying()'s job and nothing else's.
         this.flyingMoveControl = new FlyingMoveControl(this, 10, true);
     }
 
@@ -137,13 +130,11 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     }
 
     /**
-     * Creates both navigators at construction time so we can swap them at runtime.
-     * Returns {@link GroundPathNavigation} as the default; {@link FlyingPathNavigation}
-     * is only active while {@link #inFlyingMode} is true.
+     * Builds both navigators up front so flying is a swap rather than a rebuild.
+     * Ground is the default; the flying one is live only while inFlyingMode.
      *
-     * <p>Note: {@code setRequiredPathLength} is intentionally omitted. Ducks migrate
-     * 80–140 blocks and that call (borrowed from Bee) would cap/constrain path length
-     * in ways that break long-distance aerial navigation.
+     * setRequiredPathLength is deliberately not called here. Bees use it, but a migrating
+     * duck covers 80 to 140 blocks and that call would cut the path short.
      */
     @Override
     protected PathNavigation createNavigation(Level level) {
@@ -154,16 +145,13 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         return groundNav;
     }
 
-    /** @return true if the provided stack is valid duck food (tempt goal). */
+    /** Seeds. The same list TemptGoal follows and taming accepts. */
     @Override
     public boolean isFood(ItemStack stack) {
-        return DUCK_FOOD.test(stack); // no breeding item (for now)
+        return DUCK_FOOD.test(stack);
     }
 
-    /**
-     * Produces a child duck when breeding.
-     * Uses the entity type’s factory (keeps loader-agnostic semantics).
-     */
+    /** A duckling. Built through the entity type so both loaders get the same thing. */
     @Override
     public @Nullable AgeableMob getBreedOffspring(ServerLevel level, AgeableMob partner) {
         return mc.quackedducks.entities.QuackEntityTypes.DUCK.create(
@@ -171,7 +159,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                 net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
-    /** @return true when all available follower slot(s) are filled. Leaders require both slots filled. */
+    /** True when there is no room left behind this duck. Leaders have two places, others one. */
     public boolean hasFollower() {
         boolean leftFilled = followedByLeft != null && followedByLeft.isAlive()
                 && !followedByLeft.isRemoved() && followedByLeft.getLeader() == this;
@@ -183,16 +171,15 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         return leftFilled;
     }
 
-    /** @return the leader this duck is following (may be null). */
+    /** The duck ahead of this one, or null if this duck leads. */
     @Nullable
     public DuckEntity getLeader() {
         return this.following;
     }
 
     /**
-     * Attempts to claim the given duck as a follower.
-     * Leaders offer LEFT then RIGHT (V-formation); non-leaders offer LEFT only.
-     * @return the assigned {@link FollowerSlot}, or {@code null} if no slot is available.
+     * Puts a duck in behind this one and says which side it got, or null if there was
+     * no room. Leaders fill left then right; everyone else only has a left.
      */
     @Nullable
     public FollowerSlot claimFollower(DuckEntity duck) {
@@ -208,36 +195,32 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         return null;
     }
 
-    /** Releases the follower if it matches the given duck (checks both slots). */
+    /** Lets a follower go, whichever side it was on. */
     public void releaseFollower(DuckEntity duck) {
         if (followedByLeft == duck) followedByLeft = null;
         if (followedByRight == duck) followedByRight = null;
     }
 
-    /** Sets the leader this duck follows (may be null to detach). */
+    /** Follows a new duck, or null to strike out alone. */
     public void setLeader(@org.jetbrains.annotations.Nullable DuckEntity newLeader) {
         if (this.isBaby())
-            return; // babies don’t join custom chains
+            return; // ducklings follow a parent, not a flock
         if (newLeader != null && newLeader.isBaby())
-            return; // can’t follow a baby
+            return; // and nobody follows a duckling
 
         final DuckEntity prev = this.following;
         this.following = newLeader;
-        this.headStableTicks = 0; // reset stability on leader change
+        this.headStableTicks = 0; // this duck is not a settled leader any more
         dbg("leader set: {} -> {}", prev == null ? "null" : prev.getId(),
                 newLeader == null ? "null" : newLeader.getId());
         updateLeaderSpeedModifier();
     }
 
     /**
-     * GeckoLib controller driven by physics + synched hint byte.
+     * Picks the animation, from the duck's own physics plus the hint byte the server sent.
      *
-     * Priority order:
-     *   0) Active DAB one-shot - holds until finished
-     *   1) Airborne (!onGround() &amp;&amp; !isInWater()) → FLY (loop)
-     *   2) PANIC hint (fleeing/avoiding) → PANIC_ANIM (loop)
-     *   3) Moving on ground or water → WALK (loop)
-     *   4) Idle → IDLE (loop), with rare DAB one-shot variant
+     * First match wins, in the order written below: a dab that is still playing, then
+     * flying, then panic, then walking, then standing around.
      */
     @Override
     public void registerControllers(
@@ -246,7 +229,8 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                 "main",
                 2,
                 state -> {
-                    // ---- TICK GATE ----
+                    // Age the timers by however many ticks have actually gone by since
+                    // this last ran, rather than assuming one.
                     final int tickNow = this.tickCount;
                     if (lastTickSeen < 0) lastTickSeen = tickNow;
                     final int tickDelta = tickNow - lastTickSeen;
@@ -258,28 +242,27 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                         lastTickSeen = tickNow;
                     }
 
-                    // 0) Hold active DAB until it finishes
+                    // A dab in progress beats everything. Cutting it looks broken.
                     if (oneShotLockTicks > 0 && currentOneShot != null) {
                         state.setAndContinue(currentOneShot);
                         if (oneShotLockTicks <= 0) currentOneShot = null;
                         return PlayState.CONTINUE;
                     }
 
-                    // 1) Flying - checked before ground states.
-                    // Exclude water: floating ducks are not onGround() but should not
-                    // play the flap animation - they should idle or walk on the surface.
+                    // A duck floating on water is not onGround() either, so water has to be
+                    // ruled out here or every swimming duck flaps its wings.
                     if (!this.onGround() && !this.isInWater()) {
                         state.setAndContinue(FLY);
                         return PlayState.CONTINUE;
                     }
 
-                    // 2) Panic / avoid hint - duck is fleeing on ground
                     if (this.entityData.get(DATA_ANIM_HINT) == HINT_PANIC) {
                         state.setAndContinue(PANIC_ANIM);
                         return PlayState.CONTINUE;
                     }
 
-                    // 3) Walking - must actually be moving to avoid micro-jitter
+                    // Having a path is not enough; it has to be moving, or a duck stuck
+                    // against a fence walks on the spot.
                     final boolean pathing = !this.getNavigation().isDone() && this.getNavigation().getPath() != null;
                     final double horizVel2 = this.getDeltaMovement().horizontalDistanceSqr();
                     if ((pathing || horizVel2 > 0.0001D) && state.isMoving()) {
@@ -287,13 +270,13 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                         return PlayState.CONTINUE;
                     }
 
-                    // 4) Idle - occasional DAB variant (~9–11 s window, configurable chance)
+                    // Every nine to eleven seconds the duck gets a chance to dab instead.
                     if (idleVariantCooldown <= 0) {
                         final int dabN = mc.quackedducks.config.QuackConfig.get().genericDucks.dabChance;
                         if (this.random.nextInt(dabN) == 0) {
                             state.controller().reset();
                             currentOneShot = DAB;
-                            oneShotLockTicks = 45; // 1.75 s * 20 tps + 10 tick buffer
+                            oneShotLockTicks = 45; // the clip is 35 ticks, plus a little slack
                             state.setAndContinue(DAB);
                             dbg("dab triggered (lock={})", oneShotLockTicks);
                         } else {
@@ -308,7 +291,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                 }));
     }
 
-    /** Cleans up leader/follower links on removal. */
+    /** Leaves the flock properly, so nobody is left following a dead duck. */
     @Override
     public void remove(RemovalReason reason) {
         if (following != null)
@@ -322,13 +305,11 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         super.remove(reason);
     }
 
-    /** Required GeckoLib cache accessor. */
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return cache;
     }
 
-    // --- Sound Getters ---
     @Override
     protected net.minecraft.sounds.SoundEvent getAmbientSound() {
         return mc.quackedducks.sound.QuackedSounds.DUCK_AMBIENT;
@@ -345,9 +326,8 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     }
 
     /**
-     * Debug logger with consistent context (id/tame/leader).
-     * Uses SLF4J {} placeholders natively - no String.format overhead.
-     * Does nothing when {@code DEBUG_DUCKS} is false.
+     * Logs with the duck's id, tame flag and leader flag in front, so lines from a flock
+     * can be told apart. Silent unless debug is on.
      */
     private void dbg(String fmt, Object... args) {
         if (!DEBUG_DUCKS) return;
@@ -359,12 +339,12 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         LOG.info("[duck id={} tame={} leader={}] " + fmt, all);
     }
 
-    /** @return true if this duck is a leader (not following another duck). */
+    /** A leader is any adult duck that is not following someone else. */
     public boolean isLeader() {
         return !this.isBaby() && this.getLeader() == null;
     }
 
-    /** @return true when the duck has been a stable head for HEAD_STABLE_REQUIRED ticks. */
+    /** True once this duck has led long enough to be trusted with a new job. */
     public boolean isHeadStable() {
         return this.headStableTicks >= HEAD_STABLE_REQUIRED;
     }
@@ -378,25 +358,23 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     public void tick() {
         super.tick();
 
-        // Animation timers (oneShotLockTicks, idleVariantCooldown) are decremented
-        // by the controller's tick gate - no duplicate decrement here.
+        // The animation timers are aged in the controller. Don't also do it here, or
+        // they run down twice as fast and one-shots get cut off.
 
         if (!this.level().isClientSide()) {
-            // Track head stability for FOLLOW_OWNER gating in DuckBrainGoal.
             if (!this.isBaby() && this.isLeader()) {
                 headStableTicks = Math.min(headStableTicks + 1, HEAD_STABLE_REQUIRED + 200);
             } else {
                 headStableTicks = 0;
             }
 
-            // Re-apply leader speed modifier every 40 ticks - transient modifiers are
-            // dropped on world reload, so we need this to recover without a setLeader() call.
+            // Transient modifiers do not survive a world reload, so the leader's speed
+            // bonus is re-applied on a timer rather than only when the leader changes.
             if ((this.tickCount % 40) == 0) {
                 updateLeaderSpeedModifier();
             }
 
-            // Leader crown - one END_ROD particle above the head every 1.5 s so the
-            // head duck is easy to spot. Only untamed leaders emit this.
+            // A little sparkle over the leader's head so you can pick it out of the flock.
             if (isLeader() && !isTame() && (tickCount % 30) == 0) {
                 ((ServerLevel) level()).sendParticles(
                         ParticleTypes.END_ROD,
@@ -404,31 +382,36 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                         1, 0.15, 0.08, 0.15, 0.02);
             }
 
-            // Drive anim hint from brain goal state (server authoritative).
+            // Every other tick is often enough for an animation hint.
             if ((this.tickCount & 1) == 0) {
                 updateDuckState();
             }
         }
     }
 
-    /** Derives the animation hint from DuckBrainGoal state + any running avoid/breed/tempt goals. */
+    /**
+     * Works out what the duck looks like it is doing and tells the client.
+     *
+     * The brain goal answers for most of it, but the goals that can preempt the brain
+     * (fleeing, breeding, being tempted) are not visible from its state, so they are
+     * checked separately.
+     */
     private void updateDuckState() {
         byte hint = HINT_IDLE;
 
-        // Brain goal drives the primary motion states.
         if (brainGoal != null) {
             hint = switch (brainGoal.getBrainState()) {
                 case PANIC_FLY, PANIC_GROUND         -> HINT_PANIC;
                 case MIGRATE, FOLLOW_LEADER_AIR,
                      FOLLOW_OWNER, FOLLOW_LEADER_GROUND,
                      FOLLOW_PARENT, WANDER           -> HINT_WALK;
-                // LANDING: duck is physically airborne (!onGround()), so the animation
-                // controller always picks FLY regardless of HINT_IDLE here.
+                // LANDING says idle, but the duck is still off the ground, so the
+                // controller picks FLY anyway. That is what we want on the way down.
                 case LANDING, IDLE                   -> HINT_IDLE;
             };
         }
 
-        // GroundOnlyAvoidGoal (outside DuckBrainGoal) → PANIC hint if running.
+        // Fleeing a predator is its own goal, outside the brain.
         if (hint == HINT_IDLE || hint == HINT_WALK) {
             for (var w : this.goalSelector.getAvailableGoals()) {
                 if (w.isRunning() && w.getGoal() instanceof AvoidEntityGoal) {
@@ -438,7 +421,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
             }
         }
 
-        // BreedGoal or TemptGoal → WALK hint.
+        // As are breeding and chasing seeds. Both are just walking, as far as the client cares.
         if (hint == HINT_IDLE) {
             for (var w : this.goalSelector.getAvailableGoals()) {
                 if (w.isRunning()
@@ -462,7 +445,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         final ItemStack stack = player.getItemInHand(hand);
         final boolean client = level().isClientSide();
 
-        // Tame with food (seeds)
+        // Seeds tame it. There is no separate breeding item.
         if (!this.isTame() && this.isFood(stack)) {
             if (!client) {
                 if (!player.getAbilities().instabuild)
@@ -470,7 +453,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
                 this.tame(player);
                 this.setPersistenceRequired();
                 dbg("tamed by {}", player.getName().getString());
-                level().broadcastEntityEvent(this, (byte) 7); // hearts
+                level().broadcastEntityEvent(this, (byte) 7); // the taming hearts
             }
             return client ? InteractionResult.SUCCESS
                     : InteractionResult.SUCCESS_SERVER;
@@ -479,62 +462,51 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         return super.mobInteract(player, hand);
     }
 
-    /**
-     * Base attributes for ducks.
-     * - Light health, slow-ish on land, good at water movement, decent follow/tempt
-     * ranges.
-     */
+    /** Fragile like a chicken, unhurried on land, at home in water. */
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createLivingAttributes()
-                .add(Attributes.MAX_HEALTH, mc.quackedducks.config.QuackConfig.get().genericDucks.maxHealth) // fragile
-                                                                                                             // like a
-                                                                                                             // chicken
-                .add(Attributes.MOVEMENT_SPEED, mc.quackedducks.config.QuackConfig.get().genericDucks.movementSpeed) // slow-ish
-                                                                                                                     // walker
-                .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0D) // good swimmer
+                .add(Attributes.MAX_HEALTH, mc.quackedducks.config.QuackConfig.get().genericDucks.maxHealth)
+                .add(Attributes.MOVEMENT_SPEED, mc.quackedducks.config.QuackConfig.get().genericDucks.movementSpeed)
+                .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0D)
                 .add(Attributes.FLYING_SPEED, 0.9D)
-                .add(Attributes.TEMPT_RANGE, 16.0D) // how far it notices food/player
-                .add(Attributes.FOLLOW_RANGE, 12.0D); // how far it notices food/player
+                .add(Attributes.TEMPT_RANGE, 16.0D)   // how far off it spots seeds
+                .add(Attributes.FOLLOW_RANGE, 12.0D); // how far off it spots anything else
     }
 
     @Override
     protected void registerGoals() {
-        // 0: Float (JUMP flag only - never blocks MOVE goals)
+        // Only holds JUMP, so it keeps the duck's head above water without stopping
+        // whatever else it was doing.
         this.goalSelector.addGoal(0, new net.minecraft.world.entity.ai.goal.FloatGoal(this));
 
-        // 0: Lay eggs (no flags - runs independently of all movement goals)
+        // Holds no flags at all, so a duck can lay an egg mid-stroll.
         this.goalSelector.addGoal(0, new mc.quackedducks.entities.ai.LayEggGoal(this, 600, 40000000,
                 mc.quackedducks.items.QuackyModItems.duckEggSupplier()));
 
-        // 1–4: Avoid predators (ground only; suppressed while airborne by GroundOnlyAvoidGoal)
+        // Predators, in the order a duck should worry about them. Ground only.
         this.goalSelector.addGoal(1, new mc.quackedducks.entities.ai.GroundOnlyAvoidGoal<>(this, Monster.class, 12.0F, 1.0D, 1.25D));
         this.goalSelector.addGoal(2, new mc.quackedducks.entities.ai.GroundOnlyAvoidGoal<>(this, Wolf.class, 12.0F, 1.0D, 1.25D));
         this.goalSelector.addGoal(3, new mc.quackedducks.entities.ai.GroundOnlyAvoidGoal<>(this, Bee.class, 8.0F, 1.0D, 1.25D));
         this.goalSelector.addGoal(4, new mc.quackedducks.entities.ai.GroundOnlyAvoidGoal<>(this, PolarBear.class, 12.0F, 1.0D, 1.25D));
 
-        // 5: Breed
         this.goalSelector.addGoal(5, new BreedGoal(this, 1.0D));
 
-        // 6: Tempt (seeds)
         this.goalSelector.addGoal(6, new TemptGoal(this, 1.1D, DUCK_FOOD, false));
 
-        // 7: Brain - replaces FlyingPanicGoal, LeaderMigrationGoal,
-        //    FollowLeaderIfFreeGoal, DuckWaterAvoidingStrollGoal, FollowParentGoal.
-        //    Only goal that calls startFlying() / stopFlying().
+        // Everything above this line can take the wheel off the brain. Everything the
+        // duck does under its own steam is in here, and it is the only thing that ever
+        // calls startFlying() or stopFlying().
         this.brainGoal = new mc.quackedducks.entities.ai.DuckBrainGoal(this);
         this.goalSelector.addGoal(7, this.brainGoal);
 
-        // 8–9: Ambient look goals (LOOK flag only; never conflict with MOVE)
+        // Look goals only hold LOOK, so they run alongside whatever won the MOVE fight.
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
     }
 
     /**
-     * Returns config-driven {@link net.minecraft.world.entity.EntityDimensions} for this duck.
-     * Baby ducks are scaled to 50%. Called from {@link mc.quackedducks.mixin.EntityMixin}.
-     *
-     * @param pose the entity's current pose (unused; ducks have one size per age)
-     * @return scaled dimensions based on current config values
+     * The duck's hitbox, straight from the config, shrunk by babyScale for ducklings.
+     * Pose is ignored; a duck is one size for its age. Called from EntityMixin.
      */
     public net.minecraft.world.entity.EntityDimensions getDuckDimensions(net.minecraft.world.entity.Pose pose) {
         var config = mc.quackedducks.config.QuackConfig.get().genericDucks;
@@ -546,10 +518,10 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     }
 
     /**
-     * Applies or removes the {@link #LEADER_SPEED_MODIFIER} based on current leader status.
-     * Uses {@code addOrUpdateTransientModifier} so it is safe to call every tick - it only
-     * marks dirty when the value actually changes. Transient modifiers are not saved to NBT,
-     * so this must also be called periodically in tick() to survive world reloads.
+     * Gives the speed bonus to untamed adult leaders and takes it off everyone else.
+     *
+     * Cheap enough to call every tick, since addOrUpdateTransientModifier only dirties
+     * the attribute when the value really changed.
      */
     private void updateLeaderSpeedModifier() {
         if (level().isClientSide()) return;
@@ -562,7 +534,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         }
     }
 
-    /** Switch to flying navigation + move control. Called by flying goals in start(). */
+    /** Swaps in the flying navigator and move control. Only DuckBrainGoal calls this. */
     public void startFlying() {
         if (inFlyingMode) return;
         inFlyingMode = true;
@@ -572,7 +544,12 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         dbg("startFlying() - tick={}", this.tickCount);
     }
 
-    /** Switch back to ground navigation. Called by flying goals in stop(). */
+    /**
+     * Swaps back to the ground navigator and hands the duck back to gravity.
+     *
+     * Only DuckBrainGoal calls this, and only once the duck is nearly down. Calling it
+     * with height still under the duck drops it out of the sky.
+     */
     public void stopFlying() {
         if (!inFlyingMode) return;
         inFlyingMode = false;
@@ -583,12 +560,12 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
         dbg("stopFlying() - tick={}", this.tickCount);
     }
 
-    /** @return true if this duck is currently in flying mode (nav swapped to air). */
+    /** True while the flying navigator is the active one. */
     public boolean inFlyingMode() {
         return inFlyingMode;
     }
 
-    /** Ducks are birds - no fall damage. */
+    /** Ducks are birds. Empty on purpose: no fall damage. */
     @Override
     protected void checkFallDamage(double y, boolean onGround,
             net.minecraft.world.level.block.state.BlockState state,
@@ -596,16 +573,15 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
     }
 
     /**
-     * Hot-applies the current config values (movement speed, max health, hitbox)
-     * to this entity without requiring a restart. Called on all loaded ducks after
-     * the server receives an {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload}.
+     * Re-reads speed, health and hitbox from the config, so a config change lands on
+     * ducks that are already in the world. Called on every loaded duck after a save
+     * or a reload.
      */
     public void updateFromConfig() {
         var config = mc.quackedducks.config.QuackConfig.get().genericDucks;
 
-        // Attributes are server-authoritative and replicated by vanilla. maxHealth is not
-        // even in ConfigFields, so on the client this would write the client's own file
-        // over the server's synced value.
+        // Server only. Attributes replicate on their own, and maxHealth is not a networked
+        // field, so a client doing this would overwrite the server's value with its own.
         if (!this.level().isClientSide()) {
             var speedAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
             if (speedAttr != null) {
@@ -617,7 +593,7 @@ public class DuckEntity extends TamableAnimal implements GeoEntity {
             }
         }
 
-        // Hitboxes are sized from the synced fields, so both sides refresh.
+        // The hitbox comes from fields that do sync, so both sides redo it.
         this.refreshDimensions();
     }
 }

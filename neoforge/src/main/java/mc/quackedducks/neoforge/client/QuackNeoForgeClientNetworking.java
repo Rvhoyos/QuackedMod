@@ -5,11 +5,10 @@ import mc.quackedducks.network.QuackNetwork;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client-side network payload handlers for NeoForge.
+ * The clientbound payload handlers on NeoForge.
  *
- * <p>Called from the play-to-client registrations in {@link mc.quackedducks.neoforge.QuackModNeoForge#registerNetworking}.
- * Transport + thread dispatch only ({@code context.enqueueWork()}); the logic lives in the
- * loader-agnostic {@link QuackClientConfig}.
+ * Thread hop only. Everything they actually do lives in QuackClientConfig, which
+ * both loaders share.
  */
 public class QuackNeoForgeClientNetworking {
 
@@ -18,7 +17,7 @@ public class QuackNeoForgeClientNetworking {
         context.enqueueWork(() -> QuackClientConfig.applySyncAndRefresh(payload));
     }
 
-    /** Opens {@link mc.quackedducks.client.gui.QuackConfigScreen} on the main client thread. */
+    /** Opens the config screen on the main client thread. */
     public static void handleOpenConfigGui(final QuackNetwork.OpenConfigGuiPayload payload,
             final IPayloadContext context) {
         context.enqueueWork(QuackClientConfig::openConfigScreen);

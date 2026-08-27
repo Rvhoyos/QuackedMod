@@ -15,69 +15,63 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * JSON-backed singleton configuration for QuackedMod.
+ * The mod's config, read from and written to config/quack.json.
  *
- * <p>Loaded from {@code config/quack.json} on startup. If the file is missing
- * or the version doesn't match {@code CURRENT_VERSION}, defaults are written.
- * Call {@link #get()} anywhere to access the live instance; call {@link #load()}
- * to reload from disk (e.g. via {@code /quack reload}).
+ * get() hands out the live instance and loads the file on first use. load() re-reads
+ * it, which is what /quack reload does.
  *
- * <p>Two sub-objects are exposed:
- * <ul>
- *   <li>{@link GenericDucks} - per-duck physical and audio parameters</li>
- *   <li>{@link Spawning} - world-spawn weights, group sizes, and biome lists</li>
- * </ul>
+ * Two halves: GenericDucks is what a duck is like, Spawning is where they come from.
+ * The duck half can change while the server runs. The spawning half is read at world
+ * load, so it needs a restart.
  */
 public class QuackConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final int CURRENT_VERSION = 1;
     private static final String CONFIG_FILE_NAME = "quack.json";
 
-    // Singleton instance
     private static QuackConfig instance;
 
     /**
-     * Parsed biome lists, cached because {@code ConfigBiomeModifier} asks for them once
-     * per biome in the game on every world load. Cleared by {@link #load()}; nothing else
-     * mutates the biome lists ({@link #apply(ConfigFields)} only touches {@link ConfigFields}).
+     * The biome lists, already parsed. Worth caching because ConfigBiomeModifier asks
+     * for them once per biome in the game, every world load.
+     *
+     * Only load() clears these. Nothing else can invalidate them, since apply() never
+     * touches the biome lists.
      */
     private static Set<Identifier> duckBiomeCache;
     private static Set<Identifier> wetBiomeCache;
 
-    // --- Config Fields ---
     public int configVersion = CURRENT_VERSION;
     public GenericDucks genericDucks = new GenericDucks();
     public Spawning spawning = new Spawning();
 
     /**
-     * Physical and audio parameters applied to every duck entity.
-     * All values are validated and clamped by {@link QuackConfig#validate()}.
+     * What every duck is like: size, speed, health, how often it quacks.
      *
-     * <p>Implements {@link ConfigFields} so the live config and the config screen's draft
-     * can both be handed straight to {@link mc.quackedducks.network.QuackNetwork#from}
-     * without copying the field list by hand. Gson serialises fields, not methods, so the
-     * accessors do not affect the on-disk format.
+     * It implements ConfigFields so both the live config and the screen's draft can be
+     * handed straight to the network layer. The accessors that come with that do not
+     * change the JSON, because Gson serialises fields and ignores methods.
      */
     public static class GenericDucks implements ConfigFields {
         public double maxHealth = 6.0;
         public double movementSpeed = 0.25;
         public float duckWidth = 0.75f;
         public float duckHeight = 0.95f;
-        /** Multiplier applied to a baby duck's hitbox. 1.0 = same size as an adult. */
+        /** Baby hitbox as a fraction of the adult one. 1.0 means no difference. */
         public float babyScale = 0.5f;
         public int ambientSoundInterval = 120;
-        /** Ticks between migration attempts (3600 = 3 min at 20 TPS). Min 20 for testing. */
+        /** Ticks between migration attempts. 3600 is three minutes; 20 is the floor, for testing. */
         public int migrationCooldownTicks = 3600;
         /**
-         * 1-in-N chance to dab when the idle variant window opens (~every 9–11 s).
-         * 1 = always dab, 5 = 20% (default), 20 = 5% (rare).
+         * A 1-in-N roll for a dab, taken whenever the idle animation comes back around.
+         * 1 dabs every time, 5 is the default, 20 is rare.
          */
         public int dabChance = 5;
 
         public GenericDucks() {
         }
 
-        /** Deep-enough copy for the config screen's draft - all fields are primitives. */
+        /** Copy constructor for the screen's draft. Every field is a primitive, so this is enough. */
         public GenericDucks(GenericDucks src) {
             this.maxHealth = src.maxHealth;
             this.movementSpeed = src.movementSpeed;
@@ -88,8 +82,6 @@ public class QuackConfig {
             this.migrationCooldownTicks = src.migrationCooldownTicks;
             this.dabChance = src.dabChance;
         }
-
-        // --- ConfigFields ---
 
         @Override
         public float duckWidth() {
@@ -127,10 +119,7 @@ public class QuackConfig {
         }
     }
 
-    /**
-     * Clamps all {@link GenericDucks} values to safe ranges.
-     * Called automatically after loading and after client-side config updates.
-     */
+    /** Clamps everything into a range the game can survive. Runs after every load and apply. */
     public void validate() {
         genericDucks.maxHealth = Math.clamp(genericDucks.maxHealth, 0.1, 1000.0);
         genericDucks.movementSpeed = Math.clamp(genericDucks.movementSpeed, 0.05, 1.0);
@@ -143,9 +132,11 @@ public class QuackConfig {
     }
 
     /**
-     * Copies the networked {@link ConfigFields} into {@link #genericDucks} and re-validates.
-     * The single source of truth for applying an incoming config payload (in either
-     * direction) - used by both loaders' client sync and server update handlers.
+     * The one place a config payload gets copied into the live config, whichever
+     * direction it arrived from.
+     *
+     * Note what is missing: maxHealth. It is not a networked field, and a client that
+     * wrote it here would overwrite the server's value with whatever is in its own file.
      */
     public void apply(ConfigFields src) {
         genericDucks.duckWidth = src.duckWidth();
@@ -159,8 +150,8 @@ public class QuackConfig {
     }
 
     /**
-     * World-spawn configuration for duck entities.
-     * Wet biomes receive {@code baseWeight + wetBiomeBonusWeight} total spawn weight.
+     * Where ducks spawn and how many at a time.
+     * A biome on both lists ends up at baseWeight + wetBiomeBonusWeight.
      */
     public static class Spawning {
         public int baseWeight = 3;
@@ -184,21 +175,14 @@ public class QuackConfig {
                 "minecraft:beach", "minecraft:stony_shore"));
     }
 
-    // --- Loading / Saving ---
-
-    /**
-     * Loads config from disk, creating defaults if missing or version-mismatched.
-     * Always calls {@link #validate()} before returning.
-     */
+    /** Reads the file, writing defaults first if there is no file yet. */
     public static void load() {
         duckBiomeCache = null;
         wetBiomeCache = null;
 
-        File configFile = new File("config", CONFIG_FILE_NAME); // Helper assumes 'config' dir usually exists or is
-                                                                // relative to run dir
+        File configFile = new File("config", CONFIG_FILE_NAME);
 
         if (!configFile.exists()) {
-            // Create default
             instance = new QuackConfig();
             save();
             return;
@@ -208,12 +192,11 @@ public class QuackConfig {
             instance = GSON.fromJson(reader, QuackConfig.class);
         } catch (IOException e) {
             QuackMod.LOGGER.error("Failed to load generic quack config", e);
-            instance = new QuackConfig(); // Fallback
+            instance = new QuackConfig();
         }
 
-        // Version migration: preserve existing values, update version, re-save so any
-        // fields added in the new version are written with their defaults.
-        // Never wipe the config - users lose their customizations that way.
+        // On a version bump, keep what the user set and re-save so fields added in the
+        // new version land in the file with their defaults. Never wipe the config.
         if (instance.configVersion != CURRENT_VERSION) {
             QuackMod.LOGGER.info("Quack config migrated from version {} to {}; new fields use defaults.",
                     instance.configVersion, CURRENT_VERSION);
@@ -223,7 +206,7 @@ public class QuackConfig {
         instance.validate();
     }
 
-    /** Writes the current instance to {@code config/quack.json}. */
+    /** Writes the live config back to config/quack.json. */
     public static void save() {
         File configDir = new File("config");
         if (!configDir.exists()) {
@@ -238,11 +221,7 @@ public class QuackConfig {
         }
     }
 
-    /**
-     * Returns the singleton config instance, loading from disk on first call.
-     *
-     * @return the current {@link QuackConfig} instance
-     */
+    /** The live config. Loads from disk the first time anyone asks. */
     public static QuackConfig get() {
         if (instance == null) {
             load();
@@ -250,10 +229,7 @@ public class QuackConfig {
         return instance;
     }
 
-    /**
-     * Returns the set of biome {@link Identifier}s where ducks spawn normally.
-     * Cached until the next {@link #load()}.
-     */
+    /** Biomes ducks spawn in. Parsed once, then cached until the next load(). */
     public static Set<Identifier> getDuckBiomes() {
         if (duckBiomeCache == null) {
             duckBiomeCache = parseBiomes(get().spawning.duckBiomes, "biome");
@@ -261,10 +237,7 @@ public class QuackConfig {
         return duckBiomeCache;
     }
 
-    /**
-     * Returns the set of wet biome {@link Identifier}s that receive bonus spawn weight.
-     * Cached until the next {@link #load()}.
-     */
+    /** Biomes that get the bonus weight on top. Cached the same way. */
     public static Set<Identifier> getWetBiomes() {
         if (wetBiomeCache == null) {
             wetBiomeCache = parseBiomes(get().spawning.wetBiomes, "wet biome");
@@ -272,7 +245,7 @@ public class QuackConfig {
         return wetBiomeCache;
     }
 
-    /** Parses a configured biome id list, skipping and logging any malformed entry. */
+    /** Turns the configured strings into ids, logging and skipping anything malformed. */
     private static Set<Identifier> parseBiomes(List<String> raw, String label) {
         Set<Identifier> parsed = new LinkedHashSet<>();
         for (String s : raw) {

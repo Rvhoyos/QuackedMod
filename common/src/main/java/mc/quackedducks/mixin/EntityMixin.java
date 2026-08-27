@@ -9,18 +9,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Mixin into {@link net.minecraft.world.entity.LivingEntity} to redirect
- * {@code getDimensions} for {@link mc.quackedducks.entities.DuckEntity}.
+ * Redirects LivingEntity.getDimensions for ducks.
  *
- * <p>This lets ducks return config-driven hitbox sizes without overriding
- * the vanilla method directly, which would break on both loaders.
+ * A mixin rather than an override because the duck's hitbox comes from the config
+ * and has to be able to change at runtime.
  */
 @Mixin(net.minecraft.world.entity.LivingEntity.class)
 public abstract class EntityMixin {
-    /**
-     * Intercepts {@code getDimensions} at HEAD and substitutes the duck's
-     * config-driven dimensions when the target entity is a {@link mc.quackedducks.entities.DuckEntity}.
-     */
+    /** Hands back the duck's configured dimensions and skips the vanilla lookup. */
     @Inject(method = "getDimensions", at = @At("HEAD"), cancellable = true)
     private void onGetDimensions(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
         if ((Object) this instanceof DuckEntity duck) {

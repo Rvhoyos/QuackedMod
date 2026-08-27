@@ -18,19 +18,11 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.CreativeModeTabs;
 
 /**
- * Fabric common entrypoint.
- *
- * Handles:
- * - Common init via QuackMod.init()
- * - Entity attribute registration (Fabric API)
- * - Biome spawn modifications (Fabric API)
- * - Creative tab item additions (Fabric API)
+ * Fabric entrypoint. Runs the common init, then does the parts only the Fabric API
+ * can do: entity attributes, biome spawns, creative tab entries, networking.
  */
 public final class QuackModFabric implements ModInitializer {
-    /**
-     * Common Fabric initialisation: runs shared {@link mc.quackedducks.QuackMod#init()},
-     * registers commands, networking payloads, biome spawns, and creative tab entries.
-     */
+    /** Runs the shared init first, then everything that needs the Fabric API. */
     @Override
     public void onInitialize() {
         // Common init (entity types, items, sounds)
@@ -49,14 +41,14 @@ public final class QuackModFabric implements ModInitializer {
         PayloadTypeRegistry.serverboundPlay().register(QuackNetwork.UPDATE_CONFIG,
                 QuackNetwork.UpdateConfigPayload.STREAM_CODEC);
 
-        // Clientbound send hook - the only loader-specific part of the server → client path.
+        // Sending to a client is the one loader-specific step; common code goes through this hook.
         QuackMod.CLIENTBOUND_SENDER = ServerPlayNetworking::send;
 
         // Sync on join
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
                 (handler, sender, server) -> QuackMod.sendConfigSync(handler.player));
 
-        // Update Handler - transport + thread dispatch only; logic lives in common.
+        // Transport and thread hop only. The logic is in common.
         ServerPlayNetworking.registerGlobalReceiver(QuackNetwork.UPDATE_CONFIG, (payload, context) -> {
             context.server().execute(
                     () -> QuackServerConfig.applyUpdateSaveAndBroadcast(payload, context.server()));
@@ -65,7 +57,7 @@ public final class QuackModFabric implements ModInitializer {
         // Entity attributes
         FabricDefaultAttributeRegistry.register(QuackEntityTypes.DUCK, DuckEntity.createAttributes());
 
-        // Biome spawns - Load from config
+        // Biome spawns, straight from the config
         var duckBiomes = mc.quackedducks.config.QuackConfig.getDuckBiomes();
         var wetBiomes = mc.quackedducks.config.QuackConfig.getWetBiomes();
         var config = mc.quackedducks.config.QuackConfig.get();

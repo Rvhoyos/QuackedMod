@@ -10,15 +10,11 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import mc.quackedducks.entities.projectile.DuckEggEntity;
 import mc.quackedducks.QuackMod;
 
-/**
- * Fabric client entrypoint.
- * Registers client-only renderers (entity and projectile).
- */
+/** Fabric client entrypoint. Renderers and the clientbound half of networking. */
 public final class QuackModFabricClient implements ClientModInitializer {
     /**
-     * Registers entity renderers, client-side network receivers, and the
-     * {@link mc.quackedducks.QuackMod#PACKET_SENDER} hook used by common code
-     * to send payloads without loader-specific imports.
+     * Renderers, the payload receivers, and the send hook that lets common code
+     * talk to the server without importing anything Fabric-specific.
      */
     @Override
     public void onInitializeClient() {
@@ -27,7 +23,7 @@ public final class QuackModFabricClient implements ClientModInitializer {
                 QuackEntityTypes.DUCK_EGG_PROJECTILE,
                 ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<DuckEggEntity>(ctx, 1.0f, false));
 
-        // Networking receivers - transport + thread dispatch only; logic lives in common.
+        // Transport and thread hop only. The logic is in common.
         ClientPlayNetworking.registerGlobalReceiver(QuackNetwork.SYNC_CONFIG, (payload, context) -> {
             context.client().execute(() -> QuackClientConfig.applySyncAndRefresh(payload));
         });

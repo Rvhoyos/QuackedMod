@@ -8,31 +8,20 @@ import com.geckolib.renderer.GeoEntityRenderer;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.geckolib.renderer.base.RenderPassInfo;
 
-/**
- * GeckoLib renderer for {@link DuckEntity}.
- * Handles simple visual scaling (baby vs. adult) and shadow size.
- *
- * @param <R> the render state combining vanilla and GeckoLib state
- */
-
+/** GeckoLib renderer for the duck. Handles model scale and shadow size. */
 public class DuckRenderer<R extends LivingEntityRenderState & GeoRenderState> extends GeoEntityRenderer<DuckEntity, R> {
 
-    /**
-     * @param context render provider from the client bootstrap
-     */
-
+    /** Built from the client bootstrap's render context. */
     public DuckRenderer(EntityRendererProvider.Context context) {
         super(context, new DuckModel());
         this.shadowRadius = 0.3f;
     }
 
     /**
-     * Applies a simple visual scale:
-     * - Babies render at 0.5×.
-     * - Adults render at 0.9× to look a touch smaller without changing hitbox.
+     * Scales the model off the configured hitbox so the duck fills it instead of
+     * rattling around inside one. Babies render at half the adult scale.
      *
-     * If you also want a smaller hitbox, change the EntityType size in
-     * QuackEntityTypes.
+     * Visual only. The hitbox itself comes from the EntityType in QuackEntityTypes.
      */
     @Override
     public void scaleModelForRender(
@@ -42,12 +31,11 @@ public class DuckRenderer<R extends LivingEntityRenderState & GeoRenderState> ex
         var config = mc.quackedducks.config.QuackConfig.get().genericDucks;
         var renderState = renderPassInfo.renderState();
 
-        // Ratio logic: Baseline adult model is now 1.0x of the 0.75x0.95 hitbox.
-        // This makes the model larger relative to the hitbox to reduce "empty space".
+        // 0.75 x 0.95 is the stock hitbox, so a default-sized duck renders at 1.0.
         final float baseScaleX = (config.duckWidth / 0.75f) * 1.0f;
         final float baseScaleY = (config.duckHeight / 0.95f) * 1.0f;
 
-        // Baby ducks scale relative to the calculated adult scale.
+        // Babies are half of whatever the adult scale worked out to.
         final float scaleX = renderState.isBaby ? baseScaleX * 0.5f : baseScaleX;
         final float scaleY = renderState.isBaby ? baseScaleY * 0.5f : baseScaleY;
 

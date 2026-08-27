@@ -33,3 +33,6 @@ Thumbs.db
 CLAUDE.md
 .claude/
 .cache/
+# Local working docs, not shipped
+docs/spec/
+docs/reference/

@@ -7,21 +7,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.InteractionHand;
 
 /**
- * Duck egg item that throws a
- * {@link mc.quackedducks.entities.projectile.DuckEggEntity}
- * when used.
+ * A duck egg you can throw. Right-click launches a DuckEggEntity.
  *
- * Behavior:
- * - Awards the {@link net.minecraft.stats.Stats#ITEM_USED} stat.
- * - Server-side: spawns a projectile entity, sets its displayed item to a
- * single-egg copy,
- * and launches it from the player's rotation (speed 1.5f, inaccuracy 1.0f).
- * - Consumes one egg unless the player has {@code instabuild} abilities (e.g.,
- * creative).
- * - Returns {@link InteractionResult#SUCCESS} on the client and
- * {@link InteractionResult#CONSUME} on the server.
- *
- * Rendering and hatch behavior are handled by the projectile entity.
+ * What happens where it lands is the projectile's business, not this class's.
  */
 public class DuckEggItem extends Item {
 
@@ -29,15 +17,7 @@ public class DuckEggItem extends Item {
         super(properties);
     }
 
-    /**
-     * Handles right-click use of the item.
-     *
-     * @param level  world context
-     * @param player using player
-     * @param hand   hand used
-     * @return client: {@link InteractionResult#SUCCESS}, server:
-     *         {@link InteractionResult#CONSUME}
-     */
+    /** Throws one egg and takes it off the stack, unless the player is in creative. */
     @Override
     public InteractionResult use(
             Level level,
@@ -46,7 +26,7 @@ public class DuckEggItem extends Item {
 
         var stack = player.getItemInHand(hand);
         player.awardStat(net.minecraft.stats.Stats.ITEM_USED.get(this));
-        // Play vanilla egg throw sound (server broadcasts to nearby clients)
+        // Vanilla egg throw sound. Null player so everyone nearby hears it.
         level.playSound(
                 null,
                 player.getX(), player.getY(), player.getZ(),
@@ -54,13 +34,13 @@ public class DuckEggItem extends Item {
                 net.minecraft.sounds.SoundSource.PLAYERS,
                 0.5F,
                 0.4F / (player.getRandom().nextFloat() * 0.4F + 0.8F));
-        // Spawn and launch the projectile server-side only
+        // The projectile only exists server-side; the client just sees it tracked.
         if (!level.isClientSide()) {
             var proj = new mc.quackedducks.entities.projectile.DuckEggEntity(level, player, stack.copyWithCount(1));
             proj.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1.5F, 1.0F);
             level.addFreshEntity(proj);
         }
-        // Consume one egg unless in creative / instabuild
+        // Creative keeps the egg.
         if (!player.getAbilities().instabuild)
             stack.shrink(1);
         return level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.CONSUME;

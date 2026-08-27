@@ -12,18 +12,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 /**
- * In-game configuration screen opened via {@code /quack config}.
+ * The config screen, opened by /quack config.
  *
- * <p>Renders sliders for duck width, height, movement speed, and ambient sound
- * frequency. On "Done", validates the config locally and fires an
- * {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} to the server.
- * Changes take effect on all clients after the server re-broadcasts a
- * {@link mc.quackedducks.network.QuackNetwork.SyncConfigPayload}.
- *
- * <p>Sliders edit {@link #draft}, a private copy of the live config, never the
- * {@link QuackConfig} singleton. Only "Done" publishes it, so closing with ESC
- * discards the edits instead of leaving the client's ducks the wrong size until
- * the next sync.
+ * The sliders edit draft, a private copy. The live config singleton is only ever
+ * written by the sync handler, so closing with ESC throws the edits away instead
+ * of leaving this client's ducks the wrong size until the next sync. Done sends
+ * the draft to the server, which saves it and broadcasts it back to everyone.
  */
 public class QuackConfigScreen extends Screen {
     /** Unsaved working copy. The singleton is only written by the sync handler. */
@@ -35,8 +29,8 @@ public class QuackConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        // Only snapshot on first open - rebuildWidgets() re-enters init() and must keep
-        // whatever the player has already dragged.
+        // Snapshot on first open only. rebuildWidgets() comes back through init() and
+        // must not throw away what the player has already dragged.
         if (draft == null) {
             draft = new QuackConfig.GenericDucks(QuackConfig.get().genericDucks);
         }
@@ -45,47 +39,43 @@ public class QuackConfigScreen extends Screen {
         int startY = 50;
         int spacing = 26;
 
-        // --- Duck Settings ---
-
-        // Width Slider (0.1 - 5.0)
+        // Width (0.1 - 5.0)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
                 Component.literal("Duck Width: "), draft.duckWidth, 0.1f, 5.0f, (val) -> draft.duckWidth = val));
 
         startY += spacing;
 
-        // Height Slider (0.1 - 5.0)
+        // Height (0.1 - 5.0)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
                 Component.literal("Duck Height: "), draft.duckHeight, 0.1f, 5.0f, (val) -> draft.duckHeight = val));
 
         startY += spacing;
 
-        // Speed Slider (0.05 - 1.0)
+        // Speed (0.05 - 1.0)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
                 Component.literal("Movement Speed: "), (float) draft.movementSpeed, 0.05f, 1.0f,
                 (val) -> draft.movementSpeed = val));
 
         startY += spacing;
 
-        // Sound Interval Slider (20 - 1200)
+        // Quack interval (20 - 1200 ticks)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
                 Component.literal("Quack Sound Freq (Ticks): "), (float) draft.ambientSoundInterval, 20.0f, 1200.0f,
                 (val) -> draft.ambientSoundInterval = val.intValue()));
 
         startY += spacing;
 
-        // Migration Cooldown Slider (20 - 12000 ticks; 20=~1s for testing, 12000=10min)
+        // Migration cooldown (20 ticks is about a second, for testing; 12000 is 10 minutes)
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
                 Component.literal("Migration Cooldown (Ticks): "), (float) draft.migrationCooldownTicks, 20.0f, 12000.0f,
                 (val) -> draft.migrationCooldownTicks = val.intValue()));
 
         startY += spacing;
 
-        // Dab Chance Slider (1 - 20; 1=always, 5=20% default, 20=5% rare)
+        // Dab chance, as a 1-in-N roll. 1 is always, 5 is the default, 20 is rare.
         this.addRenderableWidget(new QuackSlider(centerX - 100, startY, 200, 20,
                 Component.literal("Dab Chance (1=always, 20=rare): "), (float) draft.dabChance, 1.0f, 20.0f,
                 (val) -> draft.dabChance = val.intValue()));
-
-        // --- Footer Buttons ---
 
         this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), (button) -> {
             draft = new QuackConfig.GenericDucks();
@@ -100,27 +90,22 @@ public class QuackConfigScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
-        // Draw dark gradient background for premium feel
         this.extractTransparentBackground(extractor);
 
-        // Title
         extractor.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
 
-        // Category Label
         extractor.centeredText(this.font, Component.literal("Entity Parameters"), this.width / 2, 38, 0xAAAAAA);
 
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
     }
 
-    /** Returns {@code false} so the game keeps running while the GUI is open. */
+    /** False, so the game keeps running while the screen is open. */
     @Override
     public boolean isPauseScreen() {
         return false;
     }
 
-    /**
-     * Custom premium-style slider for QuackedMod.
-     */
+    /** A slider that maps its 0-1 position onto a min/max range and formats the label. */
     private static class QuackSlider extends AbstractSliderButton {
         private final Component prefix;
         private final float min;
@@ -140,7 +125,7 @@ public class QuackConfigScreen extends Screen {
         @Override
         protected void updateMessage() {
             float value = min + (float) (this.value * (max - min));
-            // Rounding for cleaner UI
+            // Big ranges read better as whole numbers, small ones need the decimals.
             if (max > 10) {
                 this.setMessage(prefix.copy().append(String.format("%.0f", value)));
             } else {

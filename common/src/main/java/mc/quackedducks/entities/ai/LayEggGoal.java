@@ -10,30 +10,23 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.ItemLike;
 /**
- * One-shot goal that periodically makes an adult duck lay a duck egg item.
+ * Makes an adult duck drop an egg every so often.
  *
- * Behavior:
- * - Runs server-side only and never for babies.
- * - Triggers once when the cooldown hits 0, then resets the cooldown to a random
- *   value in [`minIntervalTicks`, `maxIntervalTicks`].
- * - Plays a short egg sound and drops the egg item at the duck's position.
+ * Server-side only, never for babies. Fires the tick the cooldown runs out, then
+ * rolls a fresh cooldown somewhere between the min and max interval.
  *
- * Intended use: register in {@link DuckEntity#registerGoals()} after survival/breeding goals.
+ * It holds no goal flags, so it can lay an egg while the duck is off doing something
+ * else. Nothing here moves the duck.
  */
 public class LayEggGoal extends Goal{
     private final Supplier<? extends ItemLike> eggItemSupplier;
 
     private final DuckEntity self;
-    /** Minimum and maximum interval (in ticks) between egg lays. */
+    /** How many ticks between eggs, at the low and high end. */
     private final int minIntervalTicks, maxIntervalTicks;
     private final Random rng = new Random();
     private int cooldown;
-/**
-     * @param self              the duck entity
-     * @param minIntervalTicks  minimum ticks between egg lays (inclusive)
-     * @param maxIntervalTicks  maximum ticks between egg lays (inclusive)
-     * @param eggItemSupplier   supplier for the egg item to spawn
-     */
+    /** The first egg comes sooner than the normal interval, and at a different offset per duck. */
     public LayEggGoal(DuckEntity self, int minIntervalTicks, int maxIntervalTicks, Supplier<? extends ItemLike> eggItemSupplier){
         this.self = self;
         this.eggItemSupplier = eggItemSupplier;
@@ -41,34 +34,27 @@ public class LayEggGoal extends Goal{
         this.maxIntervalTicks = maxIntervalTicks;
         this.setFlags(EnumSet.noneOf(Flag.class));
         this.cooldown = 1 + rng.nextInt(Math.max(1, this.minIntervalTicks));    }
-    /**
-     * Server-only, adult-only; returns true exactly on the tick where the
-     * internal cooldown reaches zero.
-     */
+    /** True on the one tick the cooldown hits zero. */
     @Override
     public boolean canUse() {
         if (self.isBaby() || self.level().isClientSide()) return false;
         if (cooldown > 0) { cooldown--; return false; }
-        return true; // ready to lay this tick
+        return true;
     }
 
-    /**
-     * Plays the egg sound, drops one egg item, then arms a new cooldown in
-     * [`minIntervalTicks`, `maxIntervalTicks`] (inclusive).
-     */
+    /** Sound, one egg on the ground, new cooldown. */
     @Override
     public void start() {
-        // lay the egg
         self.playSound(SoundEvents.CHICKEN_EGG, 1.0F, 1.0F);
         if (!self.level().isClientSide()) {
             net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) self.level();
-            self.spawnAtLocation(sl, eggItemSupplier.get()); // 1 item;
+            self.spawnAtLocation(sl, eggItemSupplier.get());
         }
-        // Re-arm cooldown (inclusive range).
+        // Both ends inclusive.
         cooldown = rng.nextInt((maxIntervalTicks - minIntervalTicks) + 1) + minIntervalTicks;
     }
-    /** One-shot: never continues after {@link #start()}. */
+    /** One and done. start() lays the egg, there is nothing to keep running. */
     @Override
-    public boolean canContinueToUse() { return false; } // one-shot
+    public boolean canContinueToUse() { return false; }
 }
 

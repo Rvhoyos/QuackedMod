@@ -21,10 +21,8 @@ import net.minecraft.world.item.component.TypedEntityData;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 
 /**
- * Central item registry for the mod.
- *
- * Uses vanilla {@link Registry#register}.
- * Creative tab additions are handled per-platform in the entrypoints.
+ * The mod's items.
+ * Creative tab placement is done per-loader in the entrypoints.
  */
 public class QuackyModItems {
 
@@ -38,10 +36,8 @@ public class QuackyModItems {
         public static Item DUCK_SPAWN_EGG;
 
         /**
-         * Registers all mod items into the vanilla item registry.
-         * Called from {@link mc.quackedducks.QuackMod#init()} on Fabric;
-         * on NeoForge items are registered via DeferredRegisters in
-         * {@link mc.quackedducks.neoforge.QuackModNeoForge} instead.
+         * Registers every item. Fabric calls this from QuackMod.init(); NeoForge does not,
+         * it goes through its own DeferredRegisters in QuackModNeoForge.
          */
         public static void init() {
                 DUCK_MEAT = registerItem("duck_meat", new Item(
@@ -104,14 +100,12 @@ public class QuackyModItems {
                 // - GOOFY: Easter egg turret mode for saddled ducks
         }
 
-        /**
-         * Accessor for the duck egg as a supplier.
-         */
+        /** The duck egg, as a supplier, for callers that need one lazily. */
         public static java.util.function.Supplier<? extends net.minecraft.world.level.ItemLike> duckEggSupplier() {
                 return () -> DUCK_EGG;
         }
 
-        /** Registers {@code item} under the mod namespace with the given {@code name}. */
+        /** Registers one item under the mod namespace. */
         private static Item registerItem(String name, Item item) {
                 return Registry.register(
                                 BuiltInRegistries.ITEM,
@@ -119,10 +113,7 @@ public class QuackyModItems {
                                 item);
         }
 
-        /**
-         * Creates a base {@link Item.Properties} with the mod-namespaced resource key
-         * for the given item name. Used by both Fabric and NeoForge registrations.
-         */
+        /** Item.Properties carrying the mod-namespaced id. Both loaders start here. */
         public static Item.Properties baseProperties(String name) {
                 return new Item.Properties().setId(
                                 ResourceKey.create(Registries.ITEM,

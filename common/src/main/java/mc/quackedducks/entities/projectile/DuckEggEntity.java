@@ -10,24 +10,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
 
 /**
- * Throwable duck egg projectile.
+ * The thrown duck egg. Same hatch odds as a vanilla egg: 1 in 8 to hatch, and if it
+ * does, 1 in 32 that four ducklings come out instead of one.
  *
- * Behavior:
- * - Uses duck egg item as the held/visual item.
- * - On impact (server-side), rolls vanilla-like hatch odds:
- * 1/8 chance to hatch; if hatching, 1/32 chance to spawn 4 babies otherwise 1.
- * - Spawns {@code DuckEntity} babies at the impact position and discards the
- * projectile.
- * - Emits vanilla impact particles via entity event {@code (byte)3}.
- *
- * Notes:
- * - We intentionally do **not** call
- * {@link ThrowableItemProjectile#onHit(HitResult)} to avoid vanilla egg side
- * effects.
- * - Babies are created via a direct constructor call (see comment) to sidestep
- * overloaded {@code EntityType#create(...)} issues across mappings.
+ * onHit deliberately never calls super. We handle the impact start to finish, so
+ * vanilla's egg side effects stay out of it.
  */
-
 public class DuckEggEntity extends ThrowableItemProjectile {
     public DuckEggEntity(EntityType<? extends DuckEggEntity> type, Level level) {
         super(type, level);
@@ -37,41 +25,30 @@ public class DuckEggEntity extends ThrowableItemProjectile {
         super(mc.quackedducks.entities.QuackEntityTypes.DUCK_EGG_PROJECTILE, thrower, level, stack);
     }
 
-    /** Returns the item this projectile visually represents. */
+    /** What the projectile looks like in flight. */
     @Override
     protected net.minecraft.world.item.Item getDefaultItem() {
         return mc.quackedducks.items.QuackyModItems.duckEggSupplier().get().asItem();
     }
 
-    /**
-     * Handle impact:
-     * - server: attempt hatch, send particles, discard
-     * - client: no-op
-     */
+    /** Roll for ducklings, crack the egg, remove the projectile. Server-side only. */
     @Override
     protected void onHit(HitResult result) {
-        // no super; we fully handle impact
-
-        // handle entity hit specifically
         if (result.getType() == HitResult.Type.ENTITY) {
             this.onHitEntity((net.minecraft.world.phys.EntityHitResult) result);
         }
         if (!this.level().isClientSide()) {
             hatchBabies();
-            this.level().broadcastEntityEvent(this, (byte) 3); // impact particles
+            this.level().broadcastEntityEvent(this, (byte) 3);
             this.discard();
         }
     }
 
-    /**
-     * Deals 2 damage to any entity directly struck by the egg (server-side only).
-     * Block hits are handled by {@link #onHit(HitResult)} via the hatch logic.
-     */
+    /** An egg to the face is worth 2 damage. Hitting a block does nothing here. */
     @Override
     protected void onHitEntity(net.minecraft.world.phys.EntityHitResult hit) {
         final net.minecraft.world.entity.Entity target = hit.getEntity();
 
-        // server-side damage only
         if (!this.level().isClientSide()) {
             final net.minecraft.server.level.ServerLevel server = (net.minecraft.server.level.ServerLevel) this.level();
             target.hurt(this.damageSources().thrown(this, this.getOwner()), 2.0F);
@@ -79,38 +56,11 @@ public class DuckEggEntity extends ThrowableItemProjectile {
 
     }
 
-    /**
-     * Client-side handler for custom entity events.
-     *
-     * Purpose:
-     * - Renders the egg impact effect when the server broadcasts (byte) 3.
-     * - Spawns item particles that visually "crack" the egg on hit.
-     *
-     * Call flow:
-     * - Server: level().broadcastEntityEvent(this, (byte) 3) in onHit(...)
-     * - Client: Minecraft calls handleEntityEvent on the matching client entity
-     *
-     * Parameters:
-     * - id: event identifier sent by the server
-     *
-     * Behavior:
-     * - If id == 3:
-     * - Emit 8 Item particles using this projectile's item stack
-     * - Return without calling the superclass
-     * - Otherwise:
-     * - Defer to the superclass
-     *
-     * Notes:
-     * - This method runs on the client. Do not spawn or modify server entities
-     * here.
-     * - Pair this with a sound played server-side in onHit(...) if you want audio.
-     */
-
+    /** Event 3 is the one onHit broadcasts: scatter the shell particles. */
     @Override
     public void handleEntityEvent(byte id) {
         if (id == 3) {
-            // client-side hatch/impact particles (egg cracks)
-            final net.minecraft.world.item.ItemStack stack = this.getItem(); // <- use getItem()
+            final net.minecraft.world.item.ItemStack stack = this.getItem();
             for (int i = 0; i < 8; ++i) {
                 this.level().addParticle(
                         new net.minecraft.core.particles.ItemParticleOption(
@@ -120,17 +70,13 @@ public class DuckEggEntity extends ThrowableItemProjectile {
                         (this.getRandom().nextDouble() - 0.5D) * 0.08D,
                         (this.getRandom().nextDouble() - 0.5D) * 0.08D);
             }
-            return; // don’t fall through
+            return;
         }
         super.handleEntityEvent(id);
     }
 
-    /**
-     * Vanilla-like hatch logic (1/8; if hatch then 1/32 for quads).
-     * Spawns babies at the projectile's position and marks them as babies.
-     */
+    /** Rolls the odds and puts any ducklings where the egg landed. */
     private void hatchBabies() {
-        // Vanilla-like odds: 1/8 for one baby; 1/32 for four
         int count = 0;
         if (this.getRandom().nextInt(8) == 0) {
             count = (this.getRandom().nextInt(32) == 0) ? 4 : 1;
@@ -140,17 +86,18 @@ public class DuckEggEntity extends ThrowableItemProjectile {
 
         ServerLevel server = (ServerLevel) this.level();
         for (int i = 0; i < count; i++) {
-            // Direct-construct the duck; don't use EntityType#create(...)
+            // Constructed directly. EntityType#create(...) is overloaded differently
+            // across mappings and picking the wrong one is a compile break per version.
             var baby = new mc.quackedducks.entities.DuckEntity(
                     mc.quackedducks.entities.QuackEntityTypes.DUCK,
                     server);
             if (baby != null) {
-                baby.setAge(-24000); // baby
+                baby.setAge(-24000); // a full duckling's worth of growing up
                 baby.setPos(this.getX(), this.getY(), this.getZ());
-                baby.setYRot(this.getYRot()); // optional
-                baby.setXRot(0.0F); // optional
-                baby.setYHeadRot(baby.getYRot()); // optional
-                baby.setYBodyRot(baby.getYRot()); // optional
+                baby.setYRot(this.getYRot());
+                baby.setXRot(0.0F);
+                baby.setYHeadRot(baby.getYRot());
+                baby.setYBodyRot(baby.getYRot());
                 server.addFreshEntity(baby);
             }
         }

@@ -1,20 +1,13 @@
 package mc.quackedducks.config;
 
 /**
- * The subset of {@link QuackConfig.GenericDucks} fields that are carried over the
- * network and mirrored between server and client.
+ * The config fields that go over the network.
  *
- * <p>Three things implement it: {@link QuackConfig.GenericDucks} itself (the live
- * config and the config screen's draft), and both
- * {@link mc.quackedducks.network.QuackNetwork.SyncConfigPayload} and
- * {@link mc.quackedducks.network.QuackNetwork.UpdateConfigPayload} (their record
- * accessors already match these names). That makes this interface the single shape
- * the field list is written in: {@link QuackConfig#apply(ConfigFields)} reads it,
- * {@link mc.quackedducks.network.QuackNetwork#from} writes it, and no caller has to
- * copy the fields by hand.
+ * GenericDucks and both config payloads implement this, which is why nothing has to
+ * copy the seven fields by hand: apply() reads the interface and QuackNetwork.from()
+ * writes it. Add a field here and both directions pick it up.
  *
- * <p>Fields not listed here ({@code maxHealth}) are server-only - see
- * {@link mc.quackedducks.entities.DuckEntity#updateFromConfig()}.
+ * maxHealth is deliberately absent. It is server-only.
  */
 public interface ConfigFields {
     float duckWidth();

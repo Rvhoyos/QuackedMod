@@ -15,32 +15,19 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Common entrypoint and shared bootstrap.
+ * The mod id, the logger, and the shared bootstrap both loaders call into.
  *
- * Responsibilities:
- * - Defines the mod id and logger.
- * - Initializes registries for entities, sounds, and items via their
- * {@code init()} methods.
- *
- * Biome spawns and creative tabs are handled per-platform in the loader
- * entrypoints.
- *
- * Lifecycle:
- * - This method is invoked from loader-specific entrypoints:
- * - Fabric: {@code mc.quackedducks.fabric.QuackModFabric#onInitialize()}
- * - NeoForge: {@code mc.quackedducks.neoforge.QuackModNeoForge} constructor
+ * Also holds the two hooks the loaders back-fill, because sending a packet is the
+ * only part of networking that cannot be written once for both.
  */
 public final class QuackMod {
     public static final String MOD_ID = "quack";
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
     /**
-     * Common initialization.
+     * Config, then the entity, sound and item registries.
      *
-     * Steps:
-     * 1) Initialize entity, sound, and item registries (vanilla Registry.register).
-     *
-     * Biome spawns, attribute binding, and creative tabs are handled per-platform.
+     * Biome spawns, attributes and creative tabs are the loaders' job, not this one's.
      */
     public static void init() {
         mc.quackedducks.config.QuackConfig.load();
@@ -52,46 +39,42 @@ public final class QuackMod {
     }
 
     /**
-     * Loader-injected strategy for sending any clientbound payload to one player.
-     * Sending is the only genuinely loader-specific part of the server → client path
-     * (Fabric {@code ServerPlayNetworking.send} vs NeoForge {@code player.connection.send}),
-     * so it is the only thing the loaders back-fill; which payload to send and to whom is
-     * decided here in common.
+     * How to send a payload to one player. Back-filled by whichever loader is running,
+     * since that call is genuinely different on Fabric and NeoForge.
+     *
+     * What to send and who to send it to is decided here in common, so neither loader
+     * ends up carrying a broadcast loop of its own.
      */
     public static BiConsumer<ServerPlayer, CustomPacketPayload> CLIENTBOUND_SENDER = (player, payload) -> {
         LOGGER.warn("Clientbound sender not initialized!");
     };
 
     /**
-     * Loader-injected handler that forwards an {@link QuackNetwork.UpdateConfigPayload}
-     * from the client GUI to the server. Back-filled by each loader's client entrypoint
-     * before the config screen can be opened.
+     * The same thing in the other direction: how the config screen reaches the server.
+     * Back-filled by each loader's client entrypoint before the screen can open.
      */
     public static Consumer<QuackNetwork.UpdateConfigPayload> PACKET_SENDER = (payload) -> {
         LOGGER.warn("Packet sender not initialized!");
     };
 
-    /**
-     * Sends an {@link QuackNetwork.OpenConfigGuiPayload} to {@code player}, causing the client
-     * to open {@link mc.quackedducks.client.gui.QuackConfigScreen}.
-     */
+    /** Tells one player's client to open the config screen. */
     public static void openConfigGui(ServerPlayer player) {
         CLIENTBOUND_SENDER.accept(player, new QuackNetwork.OpenConfigGuiPayload());
     }
 
-    /** Sends the live config to a single player - used on join. */
+    /** Sends the live config to one player. Used on join. */
     public static void sendConfigSync(ServerPlayer player) {
         CLIENTBOUND_SENDER.accept(player, QuackNetwork.SyncConfigPayload.fromCurrent());
     }
 
-    /** Sends the live config to every player on {@code server}. */
+    /** Sends the live config to everyone on the server. */
     public static void broadcastConfigSync(MinecraftServer server) {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             sendConfigSync(player);
         }
     }
 
-    /** Sends an {@link QuackNetwork.UpdateConfigPayload} to the server. */
+    /** Sends a config change from the screen up to the server. */
     public static void sendConfigUpdate(QuackNetwork.UpdateConfigPayload payload) {
         PACKET_SENDER.accept(payload);
     }

@@ -10,20 +10,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /**
- * Defines the three custom network payloads used by QuackedMod.
+ * The mod's three packets. Sync sends the config down on join and after a save, open
+ * tells a client to show the config screen, and update carries the player's edits back up.
  *
- * <ul>
- *   <li>{@link SyncConfigPayload} - server → client on join and after config saves</li>
- *   <li>{@link OpenConfigGuiPayload} - server → client to open the config screen</li>
- *   <li>{@link UpdateConfigPayload} - client → server when the player saves GUI changes</li>
- * </ul>
- *
- * Each loader registers these types independently via its own networking API.
- *
- * <p>The two config payloads carry an identical field list - they stay distinct record
- * types only to preserve wire identity and direction. To keep that list written once,
- * both are built through {@link #configCodec} and {@link #from}, driven by
- * {@link ConfigPayloadFactory}.
+ * Sync and update hold exactly the same fields. They stay separate record types so the
+ * direction is unambiguous on the wire, but the field list itself is only written once,
+ * in ConfigFields; configCodec and from() do the rest.
  */
 public class QuackNetwork {
     public static final CustomPacketPayload.Type<SyncConfigPayload> SYNC_CONFIG = new CustomPacketPayload.Type<>(
@@ -33,20 +25,14 @@ public class QuackNetwork {
     public static final CustomPacketPayload.Type<UpdateConfigPayload> UPDATE_CONFIG = new CustomPacketPayload.Type<>(
             Identifier.fromNamespaceAndPath(QuackMod.MOD_ID, "update_config"));
 
-    /**
-     * Canonical constructor of a config payload record, in {@link ConfigFields} order.
-     * Both payload records' generated constructors match it.
-     */
+    /** The shape of both payload constructors, in ConfigFields order. */
     @FunctionalInterface
     public interface ConfigPayloadFactory<T> {
         T create(float duckWidth, float duckHeight, float babyScale, double movementSpeed,
                 int ambientSoundInterval, int migrationCooldownTicks, int dabChance);
     }
 
-    /**
-     * Builds a config payload from any {@link ConfigFields} source - the live config or the
-     * config screen's unsaved draft.
-     */
+    /** Builds either payload from anything that has the fields: the live config, or a draft. */
     public static <T> T from(ConfigFields src, ConfigPayloadFactory<T> ctor) {
         return ctor.create(src.duckWidth(), src.duckHeight(), src.babyScale(), src.movementSpeed(),
                 src.ambientSoundInterval(), src.migrationCooldownTicks(), src.dabChance());
@@ -66,10 +52,7 @@ public class QuackNetwork {
                 ctor::create);
     }
 
-    /**
-     * Carries the subset of {@link mc.quackedducks.config.QuackConfig.GenericDucks} fields
-     * that need to be mirrored on the client for rendering and hitbox sizing.
-     */
+    /** Server to client: the config values the client needs to draw and size a duck. */
     public record SyncConfigPayload(float duckWidth, float duckHeight, float babyScale, double movementSpeed,
                                     int ambientSoundInterval, int migrationCooldownTicks, int dabChance)
             implements CustomPacketPayload, ConfigFields {
@@ -81,13 +64,13 @@ public class QuackNetwork {
             return SYNC_CONFIG;
         }
 
-        /** Snapshots the live server config for broadcast. */
+        /** A snapshot of the live config, ready to send. */
         public static SyncConfigPayload fromCurrent() {
             return from(QuackConfig.get().genericDucks, SyncConfigPayload::new);
         }
     }
 
-    /** Empty payload; receipt on the client triggers opening {@link mc.quackedducks.client.gui.QuackConfigScreen}. */
+    /** Server to client, and empty. Arriving at all is the whole message: open the screen. */
     public record OpenConfigGuiPayload() implements CustomPacketPayload {
         public static final StreamCodec<FriendlyByteBuf, OpenConfigGuiPayload> STREAM_CODEC = StreamCodec
                 .unit(new OpenConfigGuiPayload());
@@ -99,8 +82,8 @@ public class QuackNetwork {
     }
 
     /**
-     * Sent by the client when the player confirms changes in the config GUI.
-     * The server validates, saves, and re-broadcasts via {@link SyncConfigPayload}.
+     * Client to server, on Done in the config screen. The server clamps it, saves it,
+     * and sends it back out to everyone as a sync.
      */
     public record UpdateConfigPayload(float duckWidth, float duckHeight, float babyScale, double movementSpeed,
                                       int ambientSoundInterval, int migrationCooldownTicks, int dabChance)

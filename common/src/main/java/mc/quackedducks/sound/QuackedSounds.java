@@ -7,17 +7,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 
 /**
- * Sound registry for the mod.
+ * The duck's sound events.
  *
- * Responsibilities:
- * - Defines and registers {@link SoundEvent} entries under this mod id.
- *
- * Lifecycle:
- * - Call {@link #init()} from common init (see {@code QuackMod.init()}).
- *
- * Data requirements:
- * - Each registered id must be declared in {@code assets/quack/sounds.json}
- * and backed by an OGG file under {@code assets/quack/sounds/}.
+ * Every id registered here also needs an entry in assets/quack/sounds.json and an
+ * OGG file under assets/quack/sounds/, or it plays silence.
  */
 public final class QuackedSounds {
 
@@ -25,10 +18,7 @@ public final class QuackedSounds {
     public static SoundEvent DUCK_HURT;
     public static SoundEvent DUCK_DEATH;
 
-    /**
-     * Registers all sound events.
-     * Invoke once during common initialization.
-     */
+    /** Registers the sounds. Called once from common init. */
     public static void init() {
         DUCK_AMBIENT = register("entity.duck.ambient");
         DUCK_HURT = register("entity.duck.hurt");

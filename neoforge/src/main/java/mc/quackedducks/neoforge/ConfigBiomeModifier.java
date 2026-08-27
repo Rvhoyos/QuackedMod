@@ -11,16 +11,10 @@ import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.common.world.ModifiableBiomeInfo;
 
 /**
- * NeoForge {@link BiomeModifier} that injects duck spawn entries from config.
+ * Adds the duck to biome spawn lists on NeoForge, using the biomes named in the config.
  *
- * <p>During the {@link Phase#ADD} phase, ducks are added to every biome listed
- * in {@link mc.quackedducks.config.QuackConfig.Spawning#duckBiomes} at
- * {@code baseWeight}. Biomes that also appear in {@code wetBiomes} receive a
- * second entry at {@code wetBiomeBonusWeight}, effectively raising their total
- * spawn weight.
- *
- * <p>The codec is registered as a deferred biome-modifier serializer in
- * {@link QuackModNeoForge}.
+ * A biome that appears in both duckBiomes and wetBiomes gets two entries, so its
+ * total spawn weight is the base plus the wet bonus.
  */
 public class ConfigBiomeModifier implements BiomeModifier {
 
@@ -40,7 +34,7 @@ public class ConfigBiomeModifier implements BiomeModifier {
                                 config.spawning.maxGroupSize));
             }
 
-            // Wet biomes (bonus weight)
+            // Wet biomes get a second entry on top of the one above
             if (QuackConfig.getWetBiomes().contains(id)) {
                 builder.getMobSpawnSettings().addSpawn(MobCategory.CREATURE,
                         config.spawning.wetBiomeBonusWeight,

@@ -27,14 +27,14 @@ A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI,
 - **Graceful landing** - Ducks descend using flying navigation before switching to ground mode, preventing the sink-into-water bug from 1.x.
 - **Taming overhaul** - Tame the leader duck of a flock to lead the whole group. Tamed ducks follow their owner and are not afraid of predators.
 - **Animations** - Idle, walk, fly, panic, and a rare DAB animation via GeckoLib.
-- **Config system** - Real-time in-game configuration via `/quack config` (requires OP/cheats). All values are hot-applied without a restart.
+- **Config system** - Real-time in-game configuration via `/quack config` (requires OP/cheats). Duck settings apply immediately; spawn settings take effect on restart.
 
 ---
 
 ## Features
 
 ### Duck AI
-- Ducks form **leader/follower chains** of up to 3 (leader + 2 followers, then followers chain). Leaders have a particle crown above their head.
+- Ducks form **leader/follower chains**: a leader takes two followers, and each of those takes one more, so a flock keeps extending. Leaders have a particle crown above their head.
 - **Migration**: every few minutes an untamed leader picks a random land target 80–140 blocks away and flies there. Its followers switch to air-follow and come along.
 - **Panic**: any hit causes adult ducks to fly to a random escape point 8–16 blocks away. Baby ducks sprint on the ground instead.
 - Ducks avoid **monsters, wolves, polar bears, and bees** on the ground (suppressed while flying or when tamed).

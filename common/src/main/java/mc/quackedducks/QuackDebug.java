@@ -1,15 +1,15 @@
 package mc.quackedducks;
 
 /**
- * Central switch for verbose duck AI/animation logging.
+ * The one switch for duck AI and animation logging.
  *
- * <p>Off by default so servers are not spammed with per-duck state transitions.
- * Enable at launch with the JVM flag {@code -Dquack.debug=true}.
+ * Off unless you launch with -Dquack.debug=true, so a normal server never sees
+ * per-duck state transitions in its log.
  */
 public final class QuackDebug {
 
     private QuackDebug() {}
 
-    /** True when {@code -Dquack.debug=true} was passed on the command line. */
+    /** True when -Dquack.debug=true was passed on the command line. */
     public static final boolean ENABLED = Boolean.getBoolean("quack.debug");
 }

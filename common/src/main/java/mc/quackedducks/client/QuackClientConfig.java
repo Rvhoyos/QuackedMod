@@ -7,21 +7,17 @@ import mc.quackedducks.network.QuackNetwork;
 import net.minecraft.client.Minecraft;
 
 /**
- * Loader-agnostic client-side reactions to config network payloads.
+ * What the client does with an incoming config payload, shared by both loaders.
  *
- * <p>The loader entrypoints own transport and thread dispatch (Fabric
- * {@code context.client().execute(...)}, NeoForge {@code context.enqueueWork(...)});
- * they then delegate here. Every method below assumes it is already running on the
- * client thread.
+ * The loaders get us onto the client thread and then call in here.
  */
 public final class QuackClientConfig {
     private QuackClientConfig() {
     }
 
     /**
-     * Applies an incoming {@link QuackNetwork.SyncConfigPayload} to the live config and
-     * refreshes every duck currently loaded in the client world so hitbox/size changes
-     * take effect immediately.
+     * Applies the server's config to ours, then refreshes every loaded duck so a size
+     * change shows up right away instead of on the next reload.
      */
     public static void applySyncAndRefresh(final QuackNetwork.SyncConfigPayload payload) {
         QuackConfig.get().apply(payload);
@@ -36,7 +32,7 @@ public final class QuackClientConfig {
         }
     }
 
-    /** Opens the {@link QuackConfigScreen}. */
+    /** Opens the config screen. The only place in the mod that swaps the current screen. */
     public static void openConfigScreen() {
         Minecraft.getInstance().gui.setScreen(new QuackConfigScreen());
     }

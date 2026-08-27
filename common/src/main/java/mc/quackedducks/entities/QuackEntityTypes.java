@@ -12,9 +12,8 @@ import net.minecraft.world.entity.MobCategory;
 import mc.quackedducks.config.QuackConfig;
 
 /**
- * Central entity type registry for the mod.
- * Registers the duck and its thrown-egg projectile in a loader-agnostic way
- * using vanilla {@link Registry#register}.
+ * The mod's entity types: the duck and its thrown egg.
+ * Registered against the vanilla registry so both loaders share this.
  */
 public class QuackEntityTypes {
         /** The main duck entity type. */
@@ -22,11 +21,7 @@ public class QuackEntityTypes {
         /** The throwable egg projectile entity type. */
         public static EntityType<DuckEggEntity> DUCK_EGG_PROJECTILE;
 
-        /**
-         * Registers all mod entity types.
-         *
-         * Attribute binding is done per-platform in the entrypoints.
-         */
+        /** Registers both types. Attributes are bound per-loader in the entrypoints. */
         public static void init() {
                 DUCK_EGG_PROJECTILE = Registry.register(
                                 BuiltInRegistries.ENTITY_TYPE,
