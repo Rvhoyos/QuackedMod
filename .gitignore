@@ -28,11 +28,3 @@ Thumbs.db
 
 **/bin/
 .envrc
-
-# --- Claude Code ---
-CLAUDE.md
-.claude/
-.cache/
-# Local working docs, not shipped
-docs/spec/
-docs/reference/

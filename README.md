@@ -12,81 +12,35 @@
 
 # Ducky Quack Pack 2.0
 
-A cross-loader Minecraft mod that adds ducks with a fully rewritten flocking AI, natural spawns, custom sounds, taming, and craftable items. Supports Fabric and NeoForge. Powered by GeckoLib 5.5.3.
+Ducks for Minecraft, on Fabric and NeoForge.
 
-> Find us on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack) or [Modrinth](https://modrinth.com/mod/ducky-quack-pack).
+Get it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack) or
+[Modrinth](https://modrinth.com/mod/ducky-quack-pack).
 
----
+## New in 2.0
 
-## What's New in 2.0
+Ducks fly. Untamed leaders take their flock to new ground every few minutes, and adults escape into
+the air when something hits them.
 
-2.0 is a ground-up rewrite of the duck AI. The old goal-based system has been replaced with a single hierarchical state machine (`DuckBrainGoal`) that owns all locomotion decisions. This eliminates the race conditions and formation bugs that plagued 1.x.
+## Ducks
 
-- **Flocking AI rewrite** - Ducks self-organise into leader/follower chains. The leader duck is marked with a particle crown. Followers track their leader on the ground and in the air.
-- **Migration** - Untamed leader ducks periodically fly 80–140 blocks to a new location. Their followers go with them.
-- **Graceful landing** - Ducks descend using flying navigation before switching to ground mode, preventing the sink-into-water bug from 1.x.
-- **Taming overhaul** - Tame the leader duck of a flock to lead the whole group. Tamed ducks follow their owner and are not afraid of predators.
-- **Animations** - Idle, walk, fly, panic, and a rare DAB animation via GeckoLib.
-- **Config system** - Real-time in-game configuration via `/quack config` (requires OP/cheats). Duck settings apply immediately; spawn settings take effect on restart.
+- A flock walks single file behind its leader. The leader has a particle crown.
+- Feed the leader seeds to tame it. The wild followers keep trailing it, and it follows you.
+- Tamed ducks do not flee predators and do not migrate.
+- Ducklings follow the nearest adult.
+- They spawn in temperate, forest, taiga, wetland, river and shore biomes, more often near water.
 
----
+## Items
 
-## Features
+Duck meat, feathers, eggs, arrows and foie gras. Recipes are on the
+[wiki](https://quackedmod.wiki/wiki/items).
 
-### Duck AI
-- Ducks form **leader/follower chains**: a leader takes two followers, and each of those takes one more, so a flock keeps extending. Leaders have a particle crown above their head.
-- **Migration**: every few minutes an untamed leader picks a random land target 80–140 blocks away and flies there. Its followers switch to air-follow and come along.
-- **Panic**: any hit causes adult ducks to fly to a random escape point 8–16 blocks away. Baby ducks sprint on the ground instead.
-- Ducks avoid **monsters, wolves, polar bears, and bees** on the ground (suppressed while flying or when tamed).
-- Baby ducks follow the nearest adult.
+## Config
 
-### Taming
-- Feed seeds to a duck to tame it. Only the **leader** duck of a flock needs to be tamed - the wild followers trail the tamed leader who follows you.
-- Tamed ducks follow their owner when within 12 blocks and stop pursuing when the owner moves further than 20 blocks away.
-- Tamed ducks are **calm around predators** - they will not flee from wolves or monsters.
-- Tamed ducks do not migrate.
+`/quack config` in game, with cheats on. Or edit `config/quack.json` and run `/quack reload`.
 
-### Spawning
-- Spawns across temperate, forest, taiga, wetland, river, and shore biomes.
-- Wet biomes (rivers, swamps, beaches) have bonus spawn weight.
-- Group sizes and spawn weights are configurable.
-
-### Items & Crafting
-
-| Item | Source | Notes |
-|------|--------|-------|
-| Duck Meat | Duck drop (raw) | Low nutrition raw |
-| Cooked Duck | Smelt/smoke/campfire Duck Meat | Good food |
-| Duck Feather | Duck drop | Crafting ingredient |
-| Duck Feather Arrow | Craft: flint + duck feather + stick (column) → 4 arrows | Functionally identical to vanilla arrows |
-| Duck Egg | Laid periodically by adult ducks | Throwable; hatches a baby duck |
-| Empty Foie Gras Bowl | Craft: 3 planks + duck feather (bowl shape) → 4 bowls | Vessel for Foie Gras |
-| Foie Gras | Craft (shapeless): cooked duck + empty bowl | Grants Regeneration II + Absorption + Saturation |
-| Duck Spawn Egg | Creative only | Spawns a duck |
-
-### Configuration (`/quack config`)
-Entity values sync server to client on join and apply to all loaded ducks immediately, whether they
-were changed in the GUI or by editing `config/quack.json` and running `/quack reload`. `maxHealth` is
-server-side only. Spawn settings are read at world load and need a restart.
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `maxHealth` | 6.0 | Duck HP |
-| `movementSpeed` | 0.25 | Base walk speed |
-| `duckWidth` / `duckHeight` | 0.75 / 0.95 | Hitbox dimensions |
-| `babyScale` | 0.5 | Baby duck size multiplier |
-| `ambientSoundInterval` | 120 | Ticks between ambient quacks |
-| `migrationCooldownTicks` | 3600 | Ticks between migrations (3600 ≈ 3 min) |
-| `dabChance` | 5 | 1-in-N chance of DAB animation per idle window |
-| `baseWeight` | 3 | Base biome spawn weight |
-| `wetBiomeBonusWeight` | 3 | Extra weight for wet biomes |
-| `minGroupSize` / `maxGroupSize` | 1 / 1 | Spawn group size range |
-
-Config is stored in `config/quack.json`. On version upgrades, existing values are preserved and new fields are written with defaults.
-
----
-
----
+Duck settings apply to every loaded duck straight away. Spawn settings are read at world load, so
+they need a restart.
 
 ## Compatibility
 
@@ -99,66 +53,32 @@ Config is stored in `config/quack.json`. On version upgrades, existing values ar
 | GeckoLib | 5.5.3 (required, both loaders) |
 | Java | 25 |
 
----
+## Install
 
-## Installation
+Use CurseForge or Modrinth, or drop the jars into `mods/` yourself:
 
-### Via Launcher (Recommended)
-- [CurseForge](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
-- [Modrinth](https://modrinth.com/mod/ducky-quack-pack)
+- Fabric: `fabric-api (26.2).jar`, `geckolib-fabric-5.5.3.jar`, `quack-fabric-2.0.4.jar`
+- NeoForge: `geckolib-neoforge-5.5.3.jar`, `quack-neoforge-2.0.4.jar`
 
-### Manual - Fabric Client
-1. Install a Fabric profile for Minecraft 26.2.
-2. Drop into `.minecraft/mods/`:
-   - `fabric-api (26.2).jar`
-   - `geckolib-fabric-5.5.3.jar`
-   - `quack-fabric-2.0.4.jar`
+Servers are the same. Config generates at `config/quack.json` on first start.
+GeckoLib is at [modrinth.com/mod/geckolib](https://modrinth.com/mod/geckolib/versions?g=26.2).
 
-### Manual - NeoForge Client
-1. Install NeoForge for 26.2.
-2. Drop into `.minecraft/mods/`:
-   - `geckolib-neoforge-5.5.3.jar`
-   - `quack-neoforge-2.0.4.jar`
+## Building
 
-### Manual - Dedicated Server
-1. Set up a Fabric or NeoForge server for 26.2.
-2. Drop the appropriate jars (see above) into the server `mods/` folder.
-3. Start the server. Config generates at `config/quack.json`.
-
-> GeckoLib is available at [modrinth.com/mod/geckolib](https://modrinth.com/mod/geckolib/versions?g=26.2).
-
----
-
-## Building from Source
-
-**Requirements:** JDK 25+, Git.
+Needs JDK 25.
 
 ```bash
-# Clone
-git clone https://github.com/Rvhoyos/QuackedMod.git
-cd QuackedMod
-
-# Build both loaders
 ./gradlew :fabric:build
 ./gradlew :neoforge:build
-
-# Output JARs
-# fabric/build/libs/quack-fabric-*.jar
-# neoforge/build/libs/quack-neoforge-*.jar
-
-# Clean build if needed
-./gradlew :fabric:clean :fabric:build
-./gradlew :neoforge:clean :neoforge:build
 ```
 
----
+JARs land in `fabric/build/libs/` and `neoforge/build/libs/`.
 
 ## Credits
 
 Model assets and animations are thanks to callout662.
 
----
-
 ## License
 
-All Rights Reserved. You may not redistribute, modify, or use this mod's assets or source code without explicit permission.
+All Rights Reserved. You may not redistribute, modify, or use this mod's assets or source code
+without explicit permission.
