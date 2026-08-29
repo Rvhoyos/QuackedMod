@@ -3,6 +3,7 @@ package mc.quackedducks.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import mc.quackedducks.QuackMod;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 
 import java.io.File;
@@ -48,11 +49,10 @@ public class QuackConfig {
     /**
      * What every duck is like: size, speed, health, how often it quacks.
      *
-     * It implements ConfigFields so both the live config and the screen's draft can be
-     * handed straight to the network layer. The accessors that come with that do not
-     * change the JSON, because Gson serialises fields and ignores methods.
+     * The screen's draft is one of these too, so the same copy constructor covers both.
+     * Which of these fields reach a client is SyncedFields' business, not this class's.
      */
-    public static class GenericDucks implements ConfigFields {
+    public static class GenericDucks {
         public double maxHealth = 6.0;
         public double movementSpeed = 0.25;
         public float duckWidth = 0.75f;
@@ -82,41 +82,6 @@ public class QuackConfig {
             this.migrationCooldownTicks = src.migrationCooldownTicks;
             this.dabChance = src.dabChance;
         }
-
-        @Override
-        public float duckWidth() {
-            return duckWidth;
-        }
-
-        @Override
-        public float duckHeight() {
-            return duckHeight;
-        }
-
-        @Override
-        public float babyScale() {
-            return babyScale;
-        }
-
-        @Override
-        public double movementSpeed() {
-            return movementSpeed;
-        }
-
-        @Override
-        public int ambientSoundInterval() {
-            return ambientSoundInterval;
-        }
-
-        @Override
-        public int migrationCooldownTicks() {
-            return migrationCooldownTicks;
-        }
-
-        @Override
-        public int dabChance() {
-            return dabChance;
-        }
     }
 
     /** Clamps everything into a range the game can survive. Runs after every load and apply. */
@@ -135,17 +100,12 @@ public class QuackConfig {
      * The one place a config payload gets copied into the live config, whichever
      * direction it arrived from.
      *
-     * Note what is missing: maxHealth. It is not a networked field, and a client that
-     * wrote it here would overwrite the server's value with whatever is in its own file.
+     * A setting the tag does not carry keeps the value it already had, so a sender that
+     * predates a setting cannot reset it. maxHealth is not in the tag at all: a client
+     * that could write it here would overwrite the server's value with its own file's.
      */
-    public void apply(ConfigFields src) {
-        genericDucks.duckWidth = src.duckWidth();
-        genericDucks.duckHeight = src.duckHeight();
-        genericDucks.babyScale = src.babyScale();
-        genericDucks.movementSpeed = src.movementSpeed();
-        genericDucks.ambientSoundInterval = src.ambientSoundInterval();
-        genericDucks.migrationCooldownTicks = src.migrationCooldownTicks();
-        genericDucks.dabChance = src.dabChance();
+    public void apply(CompoundTag config) {
+        SyncedFields.read(config, genericDucks);
         validate();
     }
 

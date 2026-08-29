@@ -208,10 +208,16 @@ public final class QuackModNeoForge {
                 net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(this::onPlayerLoggedIn);
 
                 // Common init
-                mc.quackedducks.config.QuackConfig.load(); // Ensure config is loaded on NeoForge side
+                QuackConfig.load(); // Ensure config is loaded on NeoForge side
 
                 // Sending to a client is the one loader-specific step; common code goes through this hook.
-                QuackMod.CLIENTBOUND_SENDER = (player, payload) -> player.connection.send(payload);
+                // The channel check is not optional here: NeoForge throws if a payload is sent to a
+                // client that never registered it, which is any client on a jar older than these ids.
+                QuackMod.CLIENTBOUND_SENDER = (player, payload) -> {
+                        if (player.connection.hasChannel(payload.type())) {
+                                player.connection.send(payload);
+                        }
+                };
         }
 
         private void onRegisterCommands(RegisterCommandsEvent event) {
@@ -226,13 +232,10 @@ public final class QuackModNeoForge {
         }
 
         private void registerNetworking(final RegisterPayloadHandlersEvent event) {
-                final PayloadRegistrar registrar = event.registrar(QuackMod.MOD_ID).versioned("1.0");
-
-                registrar.configurationToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
-                                (payload, context) -> {
-                                        // Config phase, so apply only. No entities exist yet to refresh.
-                                        QuackConfig.get().apply(payload);
-                                });
+                // Optional is what lets a connection survive a version gap: a payload one side has
+                // and the other has never heard of is dropped from the negotiation instead of
+                // denying the connection.
+                final PayloadRegistrar registrar = event.registrar(QuackMod.MOD_ID).versioned("2.0").optional();
 
                 registrar.playToClient(QuackNetwork.SYNC_CONFIG, QuackNetwork.SyncConfigPayload.STREAM_CODEC,
                                 (payload, context) -> {
@@ -318,10 +321,14 @@ public final class QuackModNeoForge {
                                                 ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<mc.quackedducks.entities.projectile.DuckEggEntity>(
                                                                 ctx, 1.0f, false));
 
-                                // Hooks
+                                // Hooks. Nothing to send to a server that never registered the
+                                // channel, and NeoForge would throw rather than drop it.
                                 QuackMod.PACKET_SENDER = (payload) -> {
-                                        net.neoforged.neoforge.client.network.ClientPacketDistributor
-                                                        .sendToServer(payload);
+                                        var connection = net.minecraft.client.Minecraft.getInstance().getConnection();
+                                        if (connection != null && connection.hasChannel(QuackNetwork.UPDATE_CONFIG)) {
+                                                net.neoforged.neoforge.client.network.ClientPacketDistributor
+                                                                .sendToServer(payload);
+                                        }
                                 };
                         });
                 }

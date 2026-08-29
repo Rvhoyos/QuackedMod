@@ -33,7 +33,7 @@ public final class QuackServerConfig {
     /** Takes a config change from a client's GUI, saves it, then pushes it back out. */
     public static void applyUpdateSaveAndBroadcast(final QuackNetwork.UpdateConfigPayload payload,
             final MinecraftServer server) {
-        QuackConfig.get().apply(payload);
+        QuackConfig.get().apply(payload.config());
         QuackConfig.save();
 
         refreshAndBroadcast(server);

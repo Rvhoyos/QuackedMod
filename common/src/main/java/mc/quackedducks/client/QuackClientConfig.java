@@ -20,7 +20,7 @@ public final class QuackClientConfig {
      * change shows up right away instead of on the next reload.
      */
     public static void applySyncAndRefresh(final QuackNetwork.SyncConfigPayload payload) {
-        QuackConfig.get().apply(payload);
+        QuackConfig.get().apply(payload.config());
 
         var level = Minecraft.getInstance().level;
         if (level != null) {

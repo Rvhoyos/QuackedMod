@@ -42,7 +42,13 @@ public final class QuackModFabric implements ModInitializer {
                 QuackNetwork.UpdateConfigPayload.STREAM_CODEC);
 
         // Sending to a client is the one loader-specific step; common code goes through this hook.
-        QuackMod.CLIENTBOUND_SENDER = ServerPlayNetworking::send;
+        // A client without the channel is on a jar that predates these payloads. It keeps its own
+        // config values instead of being sent something it cannot read.
+        QuackMod.CLIENTBOUND_SENDER = (player, payload) -> {
+            if (ServerPlayNetworking.canSend(player, payload.type())) {
+                ServerPlayNetworking.send(player, payload);
+            }
+        };
 
         // Sync on join
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(

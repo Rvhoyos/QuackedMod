@@ -32,9 +32,11 @@ public final class QuackModFabricClient implements ClientModInitializer {
             context.client().execute(QuackClientConfig::openConfigScreen);
         });
 
-        // Hooks
+        // Hooks. Nothing to send to a server that never registered the channel.
         QuackMod.PACKET_SENDER = (payload) -> {
-            ClientPlayNetworking.send(payload);
+            if (ClientPlayNetworking.canSend(QuackNetwork.UPDATE_CONFIG)) {
+                ClientPlayNetworking.send(payload);
+            }
         };
     }
 }

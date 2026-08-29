@@ -83,7 +83,7 @@ public class QuackConfigScreen extends Screen {
         }).bounds(centerX - 100, this.height - 55, 200, 20).build());
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, (button) -> {
-            QuackMod.sendConfigUpdate(QuackNetwork.from(draft, QuackNetwork.UpdateConfigPayload::new));
+            QuackMod.sendConfigUpdate(QuackNetwork.UpdateConfigPayload.from(draft));
             this.onClose();
         }).bounds(centerX - 100, this.height - 30, 200, 20).build());
     }
