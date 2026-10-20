@@ -13,8 +13,7 @@
 # --- IDE project files ---
 .idea/
 *.iml
-.vscode/*
-!.vscode/tasks.json
+.vscode/
 .eclipse/
 .project
 .classpath
@@ -27,4 +26,3 @@
 Thumbs.db
 
 **/bin/
-.envrc

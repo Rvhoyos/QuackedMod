@@ -57,8 +57,8 @@ they need a restart.
 
 Use CurseForge or Modrinth, or drop the jars into `mods/` yourself:
 
-- Fabric: `fabric-api (26.2).jar`, `geckolib-fabric-5.5.3.jar`, `quack-fabric-2.0.4.jar`
-- NeoForge: `geckolib-neoforge-5.5.3.jar`, `quack-neoforge-2.0.4.jar`
+- Fabric: `fabric-api (26.2).jar`, `geckolib-fabric-5.5.3.jar`, `quack-fabric-2.0.5.jar`
+- NeoForge: `geckolib-neoforge-5.5.3.jar`, `quack-neoforge-2.0.5.jar`
 
 Servers are the same. Config generates at `config/quack.json` on first start.
 GeckoLib is at [modrinth.com/mod/geckolib](https://modrinth.com/mod/geckolib/versions?g=26.2).
