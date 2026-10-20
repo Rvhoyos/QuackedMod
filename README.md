@@ -50,7 +50,7 @@ they need a restart.
 | Fabric Loader | 0.19.3+ |
 | Fabric API | Required |
 | NeoForge | 26.2.x |
-| GeckoLib | 5.5.3 (required, both loaders) |
+| GeckoLib | 5.5.3 or any later 5.x, required on both loaders |
 | Java | 25 |
 
 ## Install
