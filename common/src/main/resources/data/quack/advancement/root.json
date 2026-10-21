@@ -3,7 +3,7 @@
     "icon": { "id": "quack:duck_egg" },
     "title": { "text": "Quack!" },
     "description": { "text": "Find a duck or pick up a duck egg." },
-    "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png",
+    "background": "minecraft:gui/advancements/backgrounds/adventure",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,
@@ -21,12 +21,15 @@
     "encounter_duck": {
       "trigger": "minecraft:player_hurt_entity",
       "conditions": {
-        "entity": { "type": "quack:duck" }
+        "entity": {
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": { "minecraft:entity_type": "quack:duck" }
+        }
       }
     }
   },
   "requirements": [
-    ["has_duck_egg"],
-    ["encounter_duck"]
+    ["has_duck_egg", "encounter_duck"]
   ]
 }

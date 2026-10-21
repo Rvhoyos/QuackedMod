@@ -1,6 +1,6 @@
 // Common module - compiles against NeoForm (vanilla Minecraft classes)
 plugins {
-    id 'net.neoforged.moddev' version '2.0.141'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
 
 neoForge {

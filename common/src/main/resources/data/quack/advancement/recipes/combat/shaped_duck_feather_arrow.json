@@ -7,7 +7,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "quack:shaped_duck_feather_arrow"
+        "recipes": "quack:shaped_duck_feather_arrow"
       }
     },
     "has_duck_feather": {
@@ -17,6 +17,5 @@
       }
     }
   },
-  "requirements": [["has_the_recipe", "has_duck_feather"]],
-  "sends_telemetry_data": false
+  "requirements": [["has_the_recipe", "has_duck_feather"]]
 }

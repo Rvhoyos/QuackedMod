@@ -5,7 +5,7 @@
 [![CurseForge Downloads](https://img.shields.io/curseforge/dt/1345567?label=CurseForge%20downloads)](https://www.curseforge.com/minecraft/mc-mods/ducky-quack-pack)
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/ducky-quack-pack?label=Modrinth%20downloads)](https://modrinth.com/mod/ducky-quack-pack)
 [![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey)](#license)
-![Minecraft](https://img.shields.io/badge/Minecraft-26.2-informational)
+![Minecraft](https://img.shields.io/badge/Minecraft-26.3-informational)
 ![Loaders](https://img.shields.io/badge/Loaders-Fabric%20%7C%20NeoForge-informational)
 
 ---
@@ -46,22 +46,22 @@ they need a restart.
 
 | | Version |
 |--|--|
-| Minecraft | 26.2 |
+| Minecraft | 26.3 |
 | Fabric Loader | 0.19.3+ |
 | Fabric API | Required |
-| NeoForge | 26.2.x |
-| GeckoLib | 5.5.3 or any later 5.x, required on both loaders |
+| NeoForge | 26.3.x |
+| GeckoLib | 5.5.6 or any later 5.x, required on both loaders |
 | Java | 25 |
 
 ## Install
 
 Use CurseForge or Modrinth, or drop the jars into `mods/` yourself:
 
-- Fabric: `fabric-api (26.2).jar`, `geckolib-fabric-5.5.3.jar`, `quack-fabric-2.0.5.jar`
-- NeoForge: `geckolib-neoforge-5.5.3.jar`, `quack-neoforge-2.0.5.jar`
+- Fabric: `fabric-api (26.3).jar`, `geckolib-fabric-5.5.7.jar`, `quack-fabric-2.0.6.jar`
+- NeoForge: `geckolib-neoforge-5.5.7.jar`, `quack-neoforge-2.0.6.jar`
 
 Servers are the same. Config generates at `config/quack.json` on first start.
-GeckoLib is at [modrinth.com/mod/geckolib](https://modrinth.com/mod/geckolib/versions?g=26.2).
+GeckoLib is at [modrinth.com/mod/geckolib](https://modrinth.com/mod/geckolib/versions?g=26.3).
 
 ## Building
 

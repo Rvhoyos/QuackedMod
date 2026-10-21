@@ -1,6 +1,6 @@
 // Fabric module
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.15.5'
+    id 'net.fabricmc.fabric-loom' version '1.19.1'
 }
 
 dependencies {

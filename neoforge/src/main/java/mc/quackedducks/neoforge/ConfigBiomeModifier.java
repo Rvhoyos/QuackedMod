@@ -4,9 +4,8 @@ import com.mojang.serialization.MapCodec;
 import mc.quackedducks.config.QuackConfig;
 import mc.quackedducks.entities.QuackEntityTypes;
 import net.minecraft.core.Holder;
-import net.minecraft.world.entity.MobCategory;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.common.world.ModifiableBiomeInfo;
 
@@ -21,25 +20,22 @@ public class ConfigBiomeModifier implements BiomeModifier {
     public static final MapCodec<ConfigBiomeModifier> CODEC = MapCodec.unit(ConfigBiomeModifier::new);
 
     @Override
-    public void modify(Holder<Biome> biome, Phase phase, ModifiableBiomeInfo.BiomeInfo.Builder builder) {
+    public void modify(RegistryAccess registries, Holder<Biome> biome, Phase phase,
+            ModifiableBiomeInfo.BiomeInfo.Builder builder) {
         if (phase == Phase.ADD) {
             var config = QuackConfig.get();
             var id = biome.unwrapKey().get().identifier();
 
-            // Generic biomes
+            // The spawn category comes from the duck's entity type, which is CREATURE.
             if (QuackConfig.getDuckBiomes().contains(id)) {
-                builder.getMobSpawnSettings().addSpawn(MobCategory.CREATURE,
-                        config.spawning.baseWeight,
-                        new MobSpawnSettings.SpawnerData(QuackEntityTypes.DUCK, config.spawning.minGroupSize,
-                                config.spawning.maxGroupSize));
+                builder.getMobSpawnSettings().addSpawn(QuackEntityTypes.DUCK, config.spawning.baseWeight,
+                        config.spawning.minGroupSize, config.spawning.maxGroupSize);
             }
 
             // Wet biomes get a second entry on top of the one above
             if (QuackConfig.getWetBiomes().contains(id)) {
-                builder.getMobSpawnSettings().addSpawn(MobCategory.CREATURE,
-                        config.spawning.wetBiomeBonusWeight,
-                        new MobSpawnSettings.SpawnerData(QuackEntityTypes.DUCK, config.spawning.minGroupSize,
-                                config.spawning.maxGroupSize));
+                builder.getMobSpawnSettings().addSpawn(QuackEntityTypes.DUCK, config.spawning.wetBiomeBonusWeight,
+                        config.spawning.minGroupSize, config.spawning.maxGroupSize);
             }
         }
     }
